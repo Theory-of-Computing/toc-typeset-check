@@ -57,16 +57,25 @@ function renderSummary(
   toctexNote: string,
 ): void {
   const counts = summarizeFindings(findings);
+  const badges = (
+    [
+      ["error", counts.errors, "errors"],
+      ["warning", counts.warnings, "warnings"],
+      ["info", counts.infos, "info"],
+    ] as const
+  )
+    .filter(([, count]) => count > 0)
+    .map(([severity, count, label]) => `<span class="badge ${severity}">${count} ${label}</span>`)
+    .join("");
+  const countsHtml = badges
+    ? `<div class="counts">${badges}</div>`
+    : `<div class="counts"><span class="badge ok">No issues found</span></div>`;
   summaryEl.innerHTML = `
     <h2>Summary</h2>
     <p><strong>Upload:</strong> ${escapeHtml(fileName)}</p>
     <p><strong>Files read:</strong> ${fileCount}</p>
     <p><strong>Main TeX:</strong> ${mainTexPath ? escapeHtml(mainTexPath) : "not found"}</p>
-    <div class="counts">
-      <span class="badge error">${counts.errors} errors</span>
-      <span class="badge warning">${counts.warnings} warnings</span>
-      <span class="badge info">${counts.infos} info</span>
-    </div>
+    ${countsHtml}
     ${toctexNote ? `<p class="notice">${escapeHtml(toctexNote)}</p>` : ""}
   `;
 }
