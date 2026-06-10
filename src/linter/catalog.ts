@@ -22,10 +22,10 @@ export const ruleCatalog: RuleCategory[] = [
     rules: [
       { id: "TOC001", severity: "error", summary: "No .tex file contains \\documentclass{toc}." },
       { id: "TOC002", severity: "error", summary: "More than one .tex file looks like a ToC main document." },
-      { id: "TOC003", severity: "warning", summary: "The upload contains more than one .tex file." },
+      { id: "TOC003", severity: "error", summary: "The upload contains more than one .tex file; ToC requires a single .tex source." },
       { id: "TOC004", severity: "warning", summary: "The upload includes generated build artifacts (.aux, .log, .out, .blg, .bbl, .brf, .toc, .fls, .fdb_latexmk, .synctex.gz)." },
       { id: "TOC005", severity: "error", summary: "No .bib file was found; ToC needs BibTeX source, not only a .bbl." },
-      { id: "TOC006", severity: "warning", summary: "More than one .bib file was found." },
+      { id: "TOC006", severity: "error", summary: "More than one .bib file was found; ToC requires a single .bib file." },
       { id: "TOC007", severity: "warning", summary: "A .bbl file is included, but the package should build from .bib." },
       { id: "TOC008", severity: "error", summary: "A required support file is missing (packages.sty or aumacros.sty)." },
       { id: "TOC009", severity: "error", summary: "No .tex source file was found at all." },
@@ -71,7 +71,7 @@ export const ruleCatalog: RuleCategory[] = [
     description: "Macro definitions that ToC disallows or discourages.",
     rules: [
       { id: "TOC026", severity: "error", summary: "Use of \\def is not allowed; use \\newcommand or \\DeclareMathOperator." },
-      { id: "TOC027", severity: "warning", summary: "Use of \\renewcommand is discouraged unless explicitly approved." },
+      { id: "TOC027", severity: "error", summary: "Use of \\renewcommand is not allowed; it redefines predefined macros and can cause undetected typesetting errors." },
     ],
   },
   {
@@ -110,7 +110,7 @@ export const ruleCatalog: RuleCategory[] = [
     description: "Figure files and formats.",
     rules: [
       { id: "TOC035", severity: "error", summary: "An \\includegraphics{...} target file was not found in the upload." },
-      { id: "TOC036", severity: "warning", summary: "An included graphic is not a PDF; vector PDF is preferred for pdflatex." },
+      { id: "TOC036", severity: "error", summary: "An included graphic is not a PDF; ToC requires graphics to be supplied in .pdf format." },
     ],
   },
   {

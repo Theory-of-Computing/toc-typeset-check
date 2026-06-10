@@ -99,12 +99,12 @@ function ruleProjectStructure({ project, mainTex }: RuleContext): Finding[] {
 
   if (texFiles.length > 1) {
     findings.push({
-      severity: "warning",
+      severity: "error",
       ruleId: "TOC003",
       message: `The upload contains ${texFiles.length} .tex files.`,
       evidence: texFiles.map((f) => f.path).join(", "),
       suggestion:
-        "For copy-editing, a single source file is easiest to handle. Keep this warning configurable if the editor allows small \\input files.",
+        "ToC requires the manuscript in a single .tex file; copy-editing becomes extremely cumbersome when the text is split across files. Merge any \\input/\\include files into one source.",
     });
   }
 
@@ -133,11 +133,11 @@ function ruleProjectStructure({ project, mainTex }: RuleContext): Finding[] {
 
   if (bibFiles.length > 1) {
     findings.push({
-      severity: "warning",
+      severity: "error",
       ruleId: "TOC006",
       message: "More than one .bib file was found.",
       evidence: bibFiles.map((f) => f.path).join(", "),
-      suggestion: "Use a single bibliography database unless the editor asks otherwise.",
+      suggestion: "ToC requires a single .bib file. Combine your BibTeX databases into one.",
     });
   }
 
@@ -406,12 +406,14 @@ function ruleForbiddenMacros({ project, journalFiles }: RuleContext): Finding[] 
     for (const match of clean.matchAll(/\\renewcommand\b/g)) {
       const pos = lineColAtOffset(clean, match.index ?? 0);
       findings.push({
-        severity: "warning",
+        severity: "error",
         ruleId: "TOC027",
         file: file.path,
         ...pos,
-        message: "Avoid \\renewcommand in ToC submissions unless explicitly approved.",
+        message: "Do not use \\renewcommand.",
         evidence: "\\renewcommand",
+        suggestion:
+          "\\renewcommand changes the meaning of predefined macros by design and may cause typesetting errors that go undetected. Define a new macro with \\newcommand instead.",
       });
     }
   }
@@ -576,12 +578,12 @@ function ruleGraphics({ project }: RuleContext): Finding[] {
         });
       } else if (![".pdf", ""].includes(fileExtension(found.path))) {
         findings.push({
-          severity: "warning",
+          severity: "error",
           ruleId: "TOC036",
           file: file.path,
           ...pos,
           message: `Graphic \`${found.path}\` is not a PDF.`,
-          suggestion: "For pdflatex copy-editing, vector PDF figures are usually preferable when possible.",
+          suggestion: "ToC requires graphics to be supplied in .pdf format. Convert this figure to PDF (e.g. with epstopdf for EPS sources).",
         });
       }
     }
