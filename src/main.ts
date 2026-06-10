@@ -89,9 +89,33 @@ function renderFindings(findings: Finding[]): void {
     return;
   }
 
+  // Group by rule ID, preserving the (severity-sorted) order of first
+  // appearance. Each rule ID maps to a single severity, so this keeps errors
+  // ahead of warnings ahead of info.
+  const groups = new Map<string, Finding[]>();
+  for (const finding of findings) {
+    const group = groups.get(finding.ruleId);
+    if (group) group.push(finding);
+    else groups.set(finding.ruleId, [finding]);
+  }
+
   resultsEl.innerHTML = `
     <h2>Findings</h2>
-    ${findings.map(renderFinding).join("")}
+    ${[...groups.values()].map(renderGroup).join("")}
+  `;
+}
+
+function renderGroup(group: Finding[]): string {
+  const [first, ...rest] = group;
+  if (rest.length === 0) return renderFinding(first);
+
+  const label = `Show ${rest.length} more occurrence${rest.length === 1 ? "" : "s"} of ${escapeHtml(first.ruleId)}`;
+  return `
+    ${renderFinding(first)}
+    <details class="more-findings">
+      <summary>${label}</summary>
+      ${rest.map(renderFinding).join("")}
+    </details>
   `;
 }
 

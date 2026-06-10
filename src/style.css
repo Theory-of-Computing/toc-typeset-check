@@ -78,6 +78,23 @@ h1 {
   border-top: 0;
 }
 
+.more-findings > summary {
+  cursor: pointer;
+  color: #475569;
+  font-size: 0.9rem;
+  padding: 0.5rem 0;
+  user-select: none;
+}
+
+.more-findings > summary:hover {
+  color: #1e293b;
+}
+
+.more-findings .finding {
+  padding-left: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
 .finding-header {
   display: flex;
   gap: 0.5rem;
