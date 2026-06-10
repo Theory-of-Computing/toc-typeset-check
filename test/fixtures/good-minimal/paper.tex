@@ -1,0 +1,48 @@
+\documentclass{toc}
+
+\tocdetails{%
+  title = {A Good Minimal Paper},
+  number_of_pages = {12},
+  number_of_bibitems = {1},
+  number_of_figures = {0},
+  conference_version = {A conference version appeared in ExampleConf 2026},
+  author = {Alice Author},
+  authorlist = {Alice Author},
+  acmclassification = {Theory of computation},
+  amsclassification = {68Qxx},
+  keywords = {example},
+}
+
+\usepackage{packages}
+\usepackage{aumacros}
+
+\begin{document}
+\begin{frontmatter}
+\title{A Good Minimal Paper}
+\author[author]{Alice Author}
+\begin{abstract}
+This is a self-contained abstract.
+\end{abstract}
+\end{frontmatter}
+
+\section{Introduction}
+This is the paper.
+
+\bibliographystyle{tocplain}
+\bibliography{paper}
+
+\begin{tocauthors}
+\begin{tocinfo}[author]
+Alice Author\\
+University\\
+alice@example.edu
+\end{tocinfo}
+\end{tocauthors}
+
+\begin{tocaboutauthors}
+\begin{tocabout}[author]
+\textsc{Alice Author} is a researcher.
+\end{tocabout}
+\end{tocaboutauthors}
+
+\end{document}

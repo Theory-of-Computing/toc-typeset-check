@@ -1,0 +1,22 @@
+\documentclass{article}
+\tocdetails{title={Bad}, number_of_pages={NN}}
+\tocdetails{}
+\def\eps{\varepsilon}
+\begin{document}
+\begin{frontmatter}
+\title{Bad}
+\author[a]{Alice Author}
+\begin{abstract}
+See \cite{missing}.
+\end{abstract}
+\end{frontmatter}
+Theorem~\ref{thm:x}.
+\bibliographystyle{plain}
+\bibliography{missing}
+\begin{tocauthors}
+\begin{tocinfo}[a] Alice Author \end{tocinfo}
+\end{tocauthors}
+\begin{tocaboutauthors}
+\begin{tocabout}[wrong] Alice Author \end{tocabout}
+\end{tocaboutauthors}
+\end{document}

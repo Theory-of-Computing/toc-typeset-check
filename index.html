@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ToC Preflight Checker</title>
+  </head>
+  <body>
+    <main id="app">
+      <section class="hero">
+        <h1>Theory of Computing preflight checker</h1>
+        <p>
+          Upload a <code>.tex</code> file or a ZIP source package. All checks run locally in your browser;
+          no file is uploaded to a server.
+        </p>
+        <label class="upload">
+          <span>Choose .tex or .zip file</span>
+          <input id="file-input" type="file" accept=".tex,.zip,application/zip" />
+        </label>
+      </section>
+
+      <section id="summary" class="summary hidden"></section>
+      <section id="results" class="results hidden"></section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
