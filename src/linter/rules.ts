@@ -104,7 +104,7 @@ function ruleProjectStructure({ project, mainTex }: RuleContext): Finding[] {
       message: `The upload contains ${texFiles.length} .tex files.`,
       evidence: texFiles.map((f) => f.path).join(", "),
       suggestion:
-        "ToC requires the manuscript in a single .tex file; copy-editing becomes extremely cumbersome when the text is split across files. Merge any \\input/\\include files into one source.",
+        "ToC requires the manuscript in a single .tex file; copy-editing becomes extremely cumbersome when the text is split across files. Merge the files pulled in with \\input or \\include into one source.",
     });
   }
 
