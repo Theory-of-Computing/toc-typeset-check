@@ -129,6 +129,12 @@ pre {
 }
 
 /* Secondary, de-emphasized: a reference link, not the primary upload action. */
+.notice {
+  margin: 0.75rem 0 0;
+  color: #92400e;
+  font-size: 0.9rem;
+}
+
 .rules-link {
   margin-left: auto;
   padding-left: 1rem;

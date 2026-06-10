@@ -1,8 +1,11 @@
 // Ad-hoc harness: run the real linter against a .zip on disk.
 // Usage: node scripts/run-zip.mjs <path-to-zip>
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import JSZip from "jszip";
 import { lintProject, summarizeFindings } from "../src/linter/run.ts";
+import { parseToctexZip } from "../src/linter/toctex.ts";
 
 const TEXT_EXTENSIONS = new Set([".tex", ".sty", ".bib", ".cls", ".bst", ".txt", ".md"]);
 
@@ -31,8 +34,12 @@ for (const entry of Object.values(zip.files)) {
   files.push(f);
 }
 
+// Load the canonical ToC distribution the same way the browser does.
+const toctexPath = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "toctex.zip");
+const journalFiles = existsSync(toctexPath) ? await parseToctexZip(readFileSync(toctexPath)) : new Map();
+
 const project = { rootName: zipPath, files };
-const { mainTexPath, findings } = lintProject(project);
+const { mainTexPath, findings } = lintProject(project, journalFiles);
 const counts = summarizeFindings(findings);
 
 console.log(`Main TeX: ${mainTexPath ?? "(not found)"}`);

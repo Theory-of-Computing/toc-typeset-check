@@ -121,6 +121,13 @@ export const ruleCatalog: RuleCategory[] = [
       { id: "TOC039", severity: "error", summary: "A tocinfo label has no matching tocabout block." },
     ],
   },
+  {
+    title: "Journal-provided files",
+    description: "Checks the ToC TeX distribution files (toc.cls, tocbase.cls, eprint.sty, tocplain.bst, etc.). These are not scanned for forbidden macros, but must not be modified by the author.",
+    rules: [
+      { id: "TOC040", severity: "warning", summary: "A ToC-provided style/class/bst file differs from the official distribution; it may have been modified or be from an older release." },
+    ],
+  },
 ];
 
 export const allRuleDocs: RuleDoc[] = ruleCatalog.flatMap((c) => c.rules);

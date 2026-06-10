@@ -3,7 +3,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { lintProject } from "../src/linter/run";
 import { allRuleDocs } from "../src/linter/catalog";
-import type { Project } from "../src/linter/types";
+import { parseToctexZip } from "../src/linter/toctex";
+import type { Project, ProjectFile } from "../src/linter/types";
 
 function loadFixture(name: string): Project {
   const root = join(__dirname, "fixtures", name);
@@ -67,5 +68,26 @@ describe("rule catalog", () => {
   it("has no duplicate rule IDs in the catalog", () => {
     const ids = allRuleDocs.map((r) => r.id);
     expect(ids.length).toBe(new Set(ids).size);
+  });
+});
+
+describe("journal files", () => {
+  function textFile(name: string, text: string): ProjectFile {
+    return { path: name, name, lowerPath: name.toLowerCase(), size: text.length, text };
+  }
+
+  it("accepts an unmodified journal file and flags a modified one", async () => {
+    const journalFiles = await parseToctexZip(readFileSync(join(__dirname, "../public/toctex.zip")));
+    const canonical = journalFiles.get("eprint.sty");
+    expect(canonical).toBeTypeOf("string");
+
+    const unmodified: Project = { rootName: "t", files: [textFile("eprint.sty", canonical!)] };
+    const unmodifiedIds = new Set(lintProject(unmodified, journalFiles).findings.map((f) => f.ruleId));
+    expect(unmodifiedIds.has("TOC040")).toBe(false);
+    expect(unmodifiedIds.has("TOC026")).toBe(false); // \def inside a journal file is not flagged
+
+    const modified: Project = { rootName: "t", files: [textFile("eprint.sty", `${canonical!}\n\\def\\x{y}`)] };
+    const modifiedIds = new Set(lintProject(modified, journalFiles).findings.map((f) => f.ruleId));
+    expect(modifiedIds.has("TOC040")).toBe(true);
   });
 });

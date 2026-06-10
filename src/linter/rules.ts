@@ -9,6 +9,14 @@ import {
   splitAuthorList,
   stripCommentsKeepLines,
 } from "./tex";
+import { normalizeStyleSource } from "./toctex";
+
+// Files supplied by the ToC TeX distribution (toctex.zip) are passed in via the
+// rule context. Authors should not edit these, and we should not lint their
+// internals (e.g. their \def use is expected and legitimate).
+function isJournalFile(file: ProjectFile, journalFiles: Map<string, string>): boolean {
+  return journalFiles.has(basename(file.path).toLowerCase());
+}
 
 const generatedExtensions = new Set([
   ".aux",
@@ -37,6 +45,7 @@ export const rules: Rule[] = [
   ruleReferences,
   ruleGraphics,
   ruleAuthorConsistency,
+  ruleJournalFiles,
 ];
 
 export function runRules(ctx: RuleContext): Finding[] {
@@ -356,9 +365,11 @@ function ruleFrontmatter({ mainTex }: RuleContext): Finding[] {
   return findings;
 }
 
-function ruleForbiddenMacros({ project }: RuleContext): Finding[] {
+function ruleForbiddenMacros({ project, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
-  for (const file of project.files.filter((f) => f.text !== undefined && /\.(tex|sty)$/i.test(f.path))) {
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && /\.(tex|sty)$/i.test(f.path) && !isJournalFile(f, journalFiles),
+  )) {
     const clean = stripCommentsKeepLines(file.text ?? "");
     for (const match of clean.matchAll(/\\def\b/g)) {
       const pos = lineColAtOffset(clean, match.index ?? 0);
@@ -388,7 +399,7 @@ function ruleForbiddenMacros({ project }: RuleContext): Finding[] {
   return findings;
 }
 
-function ruleDeadTextMarkers({ project }: RuleContext): Finding[] {
+function ruleDeadTextMarkers({ project, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
   const patterns: Array<{ regex: RegExp; message: string }> = [
     { regex: /\\iffalse\b/g, message: "Dead source block using \\iffalse remains in the file." },
@@ -397,7 +408,9 @@ function ruleDeadTextMarkers({ project }: RuleContext): Finding[] {
     { regex: /\b(?:TODO|FIXME)\b/gi, message: "TODO/FIXME marker remains in the source." },
   ];
 
-  for (const file of project.files.filter((f) => f.text !== undefined && /\.(tex|sty|bib)$/i.test(f.path))) {
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && /\.(tex|sty|bib)$/i.test(f.path) && !isJournalFile(f, journalFiles),
+  )) {
     const clean = stripCommentsKeepLines(file.text ?? "");
     for (const { regex, message } of patterns) {
       for (const match of clean.matchAll(regex)) {
@@ -627,6 +640,27 @@ function ruleAuthorConsistency({ mainTex }: RuleContext): Finding[] {
     }
   }
 
+  return findings;
+}
+
+function ruleJournalFiles({ project, journalFiles }: RuleContext): Finding[] {
+  const findings: Finding[] = [];
+  for (const file of project.files) {
+    if (file.text === undefined) continue;
+    const canonical = journalFiles.get(basename(file.path).toLowerCase());
+    if (canonical === undefined) continue;
+
+    if (normalizeStyleSource(file.text) !== canonical) {
+      findings.push({
+        severity: "warning",
+        ruleId: "TOC040",
+        file: file.path,
+        message: `Journal file \`${basename(file.path)}\` differs from the official ToC distribution (toctex.zip).`,
+        suggestion:
+          "Do not modify ToC-provided style files. Replace it with the unmodified copy from toctex.zip, or, if you are on an older release, update to the current distribution.",
+      });
+    }
+  }
   return findings;
 }
 

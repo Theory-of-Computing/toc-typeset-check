@@ -2,9 +2,12 @@ import type { Finding, Project } from "./types";
 import { findMainTex } from "./project";
 import { runRules } from "./rules";
 
-export function lintProject(project: Project): { mainTexPath?: string; findings: Finding[] } {
+export function lintProject(
+  project: Project,
+  journalFiles: Map<string, string> = new Map(),
+): { mainTexPath?: string; findings: Finding[] } {
   const mainTex = findMainTex(project);
-  const findings = runRules({ project, mainTex });
+  const findings = runRules({ project, mainTex, journalFiles });
   return { mainTexPath: mainTex?.path, findings };
 }
 

@@ -28,6 +28,9 @@ export type Finding = {
 export type RuleContext = {
   project: Project;
   mainTex?: ProjectFile;
+  // Canonical ToC distribution files (lowercased basename -> normalized
+  // content), from unzipping toctex.zip. Empty if the zip could not be loaded.
+  journalFiles: Map<string, string>;
 };
 
 export type Rule = (ctx: RuleContext) => Finding[];

@@ -1,7 +1,13 @@
+/// <reference types="vite/client" />
 import "./style.css";
 import { readUpload } from "./linter/project";
 import { lintProject, summarizeFindings } from "./linter/run";
+import { loadToctex } from "./linter/toctex";
 import type { Finding } from "./linter/types";
+
+// toctex.zip is served from the app's own origin (see public/). It is fetched
+// and unzipped in the browser, then used for the journal-file checks.
+const TOCTEX_URL = `${import.meta.env.BASE_URL}toctex.zip`;
 
 const input = document.querySelector<HTMLInputElement>("#file-input");
 const summary = document.querySelector<HTMLElement>("#summary");
@@ -25,8 +31,17 @@ input.addEventListener("change", async () => {
 
   try {
     const project = await readUpload(file);
-    const { mainTexPath, findings } = lintProject(project);
-    renderSummary(file.name, project.files.length, mainTexPath, findings);
+
+    let journalFiles = new Map<string, string>();
+    let toctexNote = "";
+    try {
+      journalFiles = await loadToctex(TOCTEX_URL);
+    } catch {
+      toctexNote = "Could not load the ToC distribution (toctex.zip); journal-file checks were skipped.";
+    }
+
+    const { mainTexPath, findings } = lintProject(project, journalFiles);
+    renderSummary(file.name, project.files.length, mainTexPath, findings, toctexNote);
     renderFindings(findings);
   } catch (error) {
     summaryEl.innerHTML = `<p><strong>Error:</strong> ${escapeHtml(error instanceof Error ? error.message : String(error))}</p>`;
@@ -34,7 +49,13 @@ input.addEventListener("change", async () => {
   }
 });
 
-function renderSummary(fileName: string, fileCount: number, mainTexPath: string | undefined, findings: Finding[]): void {
+function renderSummary(
+  fileName: string,
+  fileCount: number,
+  mainTexPath: string | undefined,
+  findings: Finding[],
+  toctexNote: string,
+): void {
   const counts = summarizeFindings(findings);
   summaryEl.innerHTML = `
     <h2>Summary</h2>
@@ -46,6 +67,7 @@ function renderSummary(fileName: string, fileCount: number, mainTexPath: string 
       <span class="badge warning">${counts.warnings} warnings</span>
       <span class="badge info">${counts.infos} info</span>
     </div>
+    ${toctexNote ? `<p class="notice">${escapeHtml(toctexNote)}</p>` : ""}
   `;
 }
 
