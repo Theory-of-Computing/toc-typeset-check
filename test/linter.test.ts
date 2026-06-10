@@ -91,6 +91,58 @@ describe("journal files", () => {
     const modifiedIds = new Set(lintProject(modified, journalFiles).findings.map((f) => f.ruleId));
     expect(modifiedIds.has("TOC040")).toBe(true);
   });
+
+  it("ignores unmodified distribution .tex/.bib copies left in the upload", async () => {
+    const journalFiles = await parseToctexZip(readFileSync(join(__dirname, "../public/toctex.zip")));
+    const sampleTex = journalFiles.get("toc-instructions.tex");
+    const sampleBib = journalFiles.get("toc-instructions.bib");
+    expect(sampleTex).toBeTypeOf("string");
+    expect(sampleBib).toBeTypeOf("string");
+
+    const main = "\\documentclass{toc}\n\\begin{document}\n\\end{document}\n";
+    const project: Project = {
+      rootName: "t",
+      files: [
+        textFile("paper.tex", main),
+        textFile("toc-instructions.tex", sampleTex!),
+        textFile("paper.bib", "@article{x, title={T}}"),
+        textFile("toc-instructions.bib", sampleBib!),
+      ],
+    };
+    const ids = new Set(lintProject(project, journalFiles).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC003")).toBe(false); // distribution .tex doesn't count as a second source
+    expect(ids.has("TOC002")).toBe(false); // nor as a second main candidate
+    expect(ids.has("TOC006")).toBe(false); // distribution .bib doesn't count as a second .bib
+
+    // An edited copy (template turned into the author's own file) is counted.
+    const edited: Project = {
+      rootName: "t",
+      files: [
+        textFile("paper.tex", main),
+        textFile("toc-instructions.tex", `${sampleTex!}\n% author edits\n`),
+        textFile("paper.bib", "@article{x, title={T}}"),
+      ],
+    };
+    const editedIds = new Set(lintProject(edited, journalFiles).findings.map((f) => f.ruleId));
+    expect(editedIds.has("TOC003")).toBe(true);
+  });
+
+  it("ignores distribution support files by name even across versions", async () => {
+    const journalFiles = await parseToctexZip(readFileSync(join(__dirname, "../public/toctex.zip")));
+    const special = journalFiles.get("tocspecial.tex");
+    expect(special).toBeTypeOf("string");
+
+    // An older release of a support file (tocspecial.tex) differs in content but
+    // is still part of the distribution and must not count as a second source.
+    const olderVersion = special!.replace(/Version 0\.\d+/, "Version 0.01") + "\n% trimmed\n";
+    const main = "\\documentclass{toc}\n\\begin{document}\n\\end{document}\n";
+    const project: Project = {
+      rootName: "t",
+      files: [textFile("paper.tex", main), textFile("tocspecial.tex", olderVersion)],
+    };
+    const ids = new Set(lintProject(project, journalFiles).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC003")).toBe(false);
+  });
 });
 
 describe("system artifacts", () => {

@@ -12,10 +12,35 @@ import {
 import { normalizeStyleSource } from "./toctex";
 
 // Files supplied by the ToC TeX distribution (toctex.zip) are passed in via the
-// rule context. Authors should not edit these, and we should not lint their
-// internals (e.g. their \def use is expected and legitimate).
-function isJournalFile(file: ProjectFile, journalFiles: Map<string, string>): boolean {
-  return journalFiles.has(basename(file.path).toLowerCase());
+// rule context, keyed by lowercased basename. Authors should not edit the
+// style files (.cls/.sty/.bst), and we should not lint their internals (e.g.
+// their \def use is expected and legitimate). The distribution also ships
+// example/template .tex and .bib files; an author who left unmodified copies in
+// their upload should not be penalized for them.
+const STYLE_EXTENSIONS = /\.(cls|sty|bst)$/i;
+
+// Distribution files that serve as starting documents an author may adapt into
+// their own paper (templates, examples, the instructions source). We only
+// ignore *unmodified* copies of these; an edited one is the author's own work.
+// Every other distribution file (.cls/.sty/.bst support files and machinery
+// such as tocspecial.tex) is ignored by name regardless of version.
+function isDistributionTemplateName(path: string): boolean {
+  return /(?:template|example|instructions)/i.test(basename(path));
+}
+
+// An unmodified copy of a distribution file (after whitespace normalization).
+function isUnmodifiedJournalCopy(file: ProjectFile, journalFiles: Map<string, string>): boolean {
+  const canonical = journalFiles.get(basename(file.path).toLowerCase());
+  return canonical !== undefined && file.text !== undefined && normalizeStyleSource(file.text) === canonical;
+}
+
+// Files we should neither count as the author's sources nor lint: distribution
+// support files (matched by name, any version) and unmodified copies of
+// distribution templates/examples.
+function isIgnoredJournalFile(file: ProjectFile, journalFiles: Map<string, string>): boolean {
+  if (!journalFiles.has(basename(file.path).toLowerCase())) return false;
+  if (isDistributionTemplateName(file.path)) return isUnmodifiedJournalCopy(file, journalFiles);
+  return true;
 }
 
 const generatedExtensions = new Set([
@@ -71,9 +96,13 @@ function ruleSystemArtifacts({ project }: RuleContext): Finding[] {
   ];
 }
 
-function ruleProjectStructure({ project, mainTex }: RuleContext): Finding[] {
+function ruleProjectStructure({ project, mainTex, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
-  const texFiles = project.files.filter((f) => f.lowerPath.endsWith(".tex"));
+  // Ignore the distribution's own .tex/.bib files (support files by name,
+  // templates/examples only when unmodified); only count the author's sources.
+  const texFiles = project.files.filter(
+    (f) => f.lowerPath.endsWith(".tex") && !isIgnoredJournalFile(f, journalFiles),
+  );
   const mainCandidates = texFiles.filter((f) =>
     /\\documentclass(?:\[[^\]]*\])?\s*\{toc\}/.test(stripCommentsKeepLines(f.text ?? "")),
   );
@@ -119,7 +148,9 @@ function ruleProjectStructure({ project, mainTex }: RuleContext): Finding[] {
     });
   }
 
-  const bibFiles = project.files.filter((f) => f.lowerPath.endsWith(".bib"));
+  const bibFiles = project.files.filter(
+    (f) => f.lowerPath.endsWith(".bib") && !isIgnoredJournalFile(f, journalFiles),
+  );
   const bblFiles = project.files.filter((f) => f.lowerPath.endsWith(".bbl"));
 
   if (bibFiles.length === 0) {
@@ -162,7 +193,7 @@ function ruleProjectStructure({ project, mainTex }: RuleContext): Finding[] {
     }
   }
 
-  if (!mainTex && texFiles.length === 0) {
+  if (!mainTex && !project.files.some((f) => f.lowerPath.endsWith(".tex"))) {
     findings.push({
       severity: "error",
       ruleId: "TOC009",
@@ -387,7 +418,7 @@ function ruleFrontmatter({ mainTex }: RuleContext): Finding[] {
 function ruleForbiddenMacros({ project, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
   for (const file of project.files.filter(
-    (f) => f.text !== undefined && /\.(tex|sty)$/i.test(f.path) && !isJournalFile(f, journalFiles),
+    (f) => f.text !== undefined && /\.(tex|sty)$/i.test(f.path) && !isIgnoredJournalFile(f, journalFiles),
   )) {
     const clean = stripCommentsKeepLines(file.text ?? "");
     for (const match of clean.matchAll(/\\def\b/g)) {
@@ -430,7 +461,7 @@ function ruleDeadTextMarkers({ project, journalFiles }: RuleContext): Finding[] 
   ];
 
   for (const file of project.files.filter(
-    (f) => f.text !== undefined && /\.(tex|sty|bib)$/i.test(f.path) && !isJournalFile(f, journalFiles),
+    (f) => f.text !== undefined && /\.(tex|sty|bib)$/i.test(f.path) && !isIgnoredJournalFile(f, journalFiles),
   )) {
     const clean = stripCommentsKeepLines(file.text ?? "");
     for (const { regex, message } of patterns) {
@@ -531,9 +562,11 @@ function ruleInputFiles({ mainTex, project }: RuleContext): Finding[] {
   return findings;
 }
 
-function ruleReferences({ project }: RuleContext): Finding[] {
+function ruleReferences({ project, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
-  for (const file of project.files.filter((f) => f.text !== undefined && f.lowerPath.endsWith(".tex"))) {
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && f.lowerPath.endsWith(".tex") && !isIgnoredJournalFile(f, journalFiles),
+  )) {
     const clean = stripCommentsKeepLines(file.text ?? "");
     for (const match of clean.matchAll(/\\ref\s*\{([^}]+)\}/g)) {
       const start = match.index ?? 0;
@@ -558,9 +591,11 @@ function ruleReferences({ project }: RuleContext): Finding[] {
   return findings;
 }
 
-function ruleGraphics({ project }: RuleContext): Finding[] {
+function ruleGraphics({ project, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
-  for (const file of project.files.filter((f) => f.text !== undefined && f.lowerPath.endsWith(".tex"))) {
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && f.lowerPath.endsWith(".tex") && !isIgnoredJournalFile(f, journalFiles),
+  )) {
     const clean = stripCommentsKeepLines(file.text ?? "");
     for (const cmd of findCommandArgs(clean, "\\includegraphics")) {
       const requested = cmd.value.trim();
@@ -668,6 +703,9 @@ function ruleJournalFiles({ project, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
   for (const file of project.files) {
     if (file.text === undefined) continue;
+    // Only style files (.cls/.sty/.bst) must be unmodified. The distribution's
+    // .tex/.bib examples are templates and may legitimately be edited.
+    if (!STYLE_EXTENSIONS.test(file.path)) continue;
     const canonical = journalFiles.get(basename(file.path).toLowerCase());
     if (canonical === undefined) continue;
 

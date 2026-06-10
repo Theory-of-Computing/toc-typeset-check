@@ -4,8 +4,12 @@ import JSZip from "jszip";
 // normalized content. Built at runtime by unzipping toctex.zip.
 export type JournalFiles = Map<string, string>;
 
-// The journal supplies its typesetting files as .cls / .sty / .bst.
-const JOURNAL_EXTENSIONS = new Set([".cls", ".sty", ".bst"]);
+// The journal supplies its typesetting files as .cls / .sty / .bst, plus
+// example/template .tex files (toc-instructions.tex, *-template.tex, etc.) and
+// an example .bib (toc-instructions.bib). We keep the .tex and .bib entries so
+// we can recognize and ignore unmodified copies an author may have left in
+// their upload.
+const JOURNAL_EXTENSIONS = new Set([".cls", ".sty", ".bst", ".tex", ".bib"]);
 
 // Normalization used when comparing an uploaded journal file against the
 // canonical distribution copy. We ignore differences that don't change the
