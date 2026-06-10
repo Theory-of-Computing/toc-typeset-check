@@ -46,11 +46,11 @@ describe("ToC linter MVP", () => {
     const project = loadFixture("bad-sample");
     const { findings } = lintProject(project);
     const ids = new Set(findings.map((f) => f.ruleId));
-    expect(ids.has("TOC011")).toBe(true); // wrong document class
-    expect(ids.has("TOC015")).toBe(true); // duplicate tocdetails
-    expect(ids.has("TOC026")).toBe(true); // \def
-    expect(ids.has("TOC025")).toBe(true); // abstract cite
-    expect(ids.has("TOC034")).toBe(true); // direct \ref
+    expect(ids.has("TOC012")).toBe(true); // wrong document class
+    expect(ids.has("TOC016")).toBe(true); // duplicate tocdetails
+    expect(ids.has("TOC027")).toBe(true); // \def
+    expect(ids.has("TOC026")).toBe(true); // abstract cite
+    expect(ids.has("TOC036")).toBe(true); // direct \ref
   });
 });
 
@@ -84,12 +84,12 @@ describe("journal files", () => {
 
     const unmodified: Project = { rootName: "t", files: [textFile("eprint.sty", canonical!)] };
     const unmodifiedIds = new Set(lintProject(unmodified, journalFiles).findings.map((f) => f.ruleId));
-    expect(unmodifiedIds.has("TOC040")).toBe(false);
-    expect(unmodifiedIds.has("TOC026")).toBe(false); // \def inside a journal file is not flagged
+    expect(unmodifiedIds.has("TOC042")).toBe(false);
+    expect(unmodifiedIds.has("TOC027")).toBe(false); // \def inside a journal file is not flagged
 
     const modified: Project = { rootName: "t", files: [textFile("eprint.sty", `${canonical!}\n\\def\\x{y}`)] };
     const modifiedIds = new Set(lintProject(modified, journalFiles).findings.map((f) => f.ruleId));
-    expect(modifiedIds.has("TOC040")).toBe(true);
+    expect(modifiedIds.has("TOC042")).toBe(true);
   });
 
   it("ignores unmodified distribution .tex/.bib copies left in the upload", async () => {
@@ -159,7 +159,7 @@ describe("unused citations", () => {
   it("flags a .bib entry that is never cited", () => {
     const tex = "\\documentclass{toc}\n\\begin{document}\n\\cite{used}\\citep[p.~3]{alsoused}\n\\end{document}\n";
     const project: Project = { rootName: "t", files: [textFile("paper.tex", tex), textFile("refs.bib", bib)] };
-    const findings = lintProject(project).findings.filter((f) => f.ruleId === "TOC042");
+    const findings = lintProject(project).findings.filter((f) => f.ruleId === "TOC034");
     expect(findings).toHaveLength(1);
     expect(findings[0].message).toContain("orphan");
   });
@@ -168,7 +168,7 @@ describe("unused citations", () => {
     const tex = "\\documentclass{toc}\n\\begin{document}\n\\nocite{*}\n\\end{document}\n";
     const project: Project = { rootName: "t", files: [textFile("paper.tex", tex), textFile("refs.bib", bib)] };
     const ids = new Set(lintProject(project).findings.map((f) => f.ruleId));
-    expect(ids.has("TOC042")).toBe(false);
+    expect(ids.has("TOC034")).toBe(false);
   });
 
   it("treats citation keys case-insensitively and ignores @string/@comment", () => {
@@ -176,7 +176,7 @@ describe("unused citations", () => {
     const tex = "\\documentclass{toc}\n\\begin{document}\n\\cite{used,alsoused,orphan}\\citet{mixedcase}\n\\end{document}\n";
     const project: Project = { rootName: "t", files: [textFile("paper.tex", tex), textFile("refs.bib", `${bib}\n\n${extras}`)] };
     const ids = new Set(lintProject(project).findings.map((f) => f.ruleId));
-    expect(ids.has("TOC042")).toBe(false);
+    expect(ids.has("TOC034")).toBe(false);
   });
 });
 
@@ -197,7 +197,7 @@ describe("system artifacts", () => {
       files: [],
       ignoredSystemPaths: ["__MACOSX/._paper.tex", "__MACOSX/._fig.pdf", "paper/.DS_Store"],
     };
-    const findings = lintProject(project).findings.filter((f) => f.ruleId === "TOC041");
+    const findings = lintProject(project).findings.filter((f) => f.ruleId === "TOC010");
     expect(findings).toHaveLength(1);
     expect(findings[0].evidence).toContain("__MACOSX/");
     expect(findings[0].evidence).toContain(".DS_Store");

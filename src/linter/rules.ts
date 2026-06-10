@@ -88,7 +88,7 @@ function ruleSystemArtifacts({ project }: RuleContext): Finding[] {
   return [
     {
       severity: "warning",
-      ruleId: "TOC041",
+      ruleId: "TOC010",
       message: "The upload contains system-generated files or folders that should be removed from the zip.",
       evidence: shown,
       suggestion:
@@ -214,7 +214,7 @@ function ruleMainDocumentShape({ mainTex }: RuleContext): Finding[] {
   if (!docclass) {
     findings.push({
       severity: "error",
-      ruleId: "TOC010",
+      ruleId: "TOC011",
       file: mainTex.path,
       message: "Missing \\documentclass{toc}.",
     });
@@ -222,7 +222,7 @@ function ruleMainDocumentShape({ mainTex }: RuleContext): Finding[] {
     const pos = lineColAtOffset(clean, docclass.index);
     findings.push({
       severity: "error",
-      ruleId: "TOC011",
+      ruleId: "TOC012",
       file: mainTex.path,
       ...pos,
       message: "The main file does not use the ToC document class.",
@@ -234,10 +234,10 @@ function ruleMainDocumentShape({ mainTex }: RuleContext): Finding[] {
   const beginDocument = /\\begin\s*\{document\}/.exec(clean);
   const endDocument = /\\end\s*\{document\}/.exec(clean);
   if (!beginDocument) {
-    findings.push({ severity: "error", ruleId: "TOC012", file: mainTex.path, message: "Missing \\begin{document}." });
+    findings.push({ severity: "error", ruleId: "TOC013", file: mainTex.path, message: "Missing \\begin{document}." });
   }
   if (!endDocument) {
-    findings.push({ severity: "error", ruleId: "TOC013", file: mainTex.path, message: "Missing \\end{document}." });
+    findings.push({ severity: "error", ruleId: "TOC014", file: mainTex.path, message: "Missing \\end{document}." });
   }
 
   return findings;
@@ -253,7 +253,7 @@ function ruleTocDetails({ mainTex }: RuleContext): Finding[] {
     return [
       {
         severity: "error",
-        ruleId: "TOC014",
+        ruleId: "TOC015",
         file: mainTex.path,
         message: "Missing \\tocdetails{...} before \\begin{document}.",
       },
@@ -265,7 +265,7 @@ function ruleTocDetails({ mainTex }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, block.match.index ?? 0);
       findings.push({
         severity: "error",
-        ruleId: "TOC015",
+        ruleId: "TOC016",
         file: mainTex.path,
         ...pos,
         message: `Duplicate \\tocdetails block #${i + 2}.`,
@@ -281,7 +281,7 @@ function ruleTocDetails({ mainTex }: RuleContext): Finding[] {
     const pos = lineColAtOffset(clean, first.match.index);
     findings.push({
       severity: "error",
-      ruleId: "TOC016",
+      ruleId: "TOC017",
       file: mainTex.path,
       ...pos,
       message: "\\tocdetails appears after \\begin{document}.",
@@ -310,7 +310,7 @@ function ruleTocDetails({ mainTex }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, first.match.index ?? 0);
       findings.push({
         severity: "error",
-        ruleId: "TOC017",
+        ruleId: "TOC018",
         file: mainTex.path,
         ...pos,
         message: `\\tocdetails is missing required key \`${key}\`.`,
@@ -325,7 +325,7 @@ function ruleTocDetails({ mainTex }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, first.open + 1 + kv.valueOffset);
       findings.push({
         severity: "warning",
-        ruleId: "TOC018",
+        ruleId: "TOC019",
         file: mainTex.path,
         ...pos,
         message: `Placeholder value in \\tocdetails for \`${kv.key}\`.`,
@@ -347,19 +347,19 @@ function ruleFrontmatter({ mainTex }: RuleContext): Finding[] {
   const endFrontmatter = /\\end\s*\{frontmatter\}/.exec(clean);
 
   if (!beginFrontmatter) {
-    findings.push({ severity: "error", ruleId: "TOC019", file: mainTex.path, message: "Missing frontmatter environment." });
+    findings.push({ severity: "error", ruleId: "TOC020", file: mainTex.path, message: "Missing frontmatter environment." });
     return findings;
   }
 
   if (!endFrontmatter) {
-    findings.push({ severity: "error", ruleId: "TOC020", file: mainTex.path, message: "Missing \\end{frontmatter}." });
+    findings.push({ severity: "error", ruleId: "TOC021", file: mainTex.path, message: "Missing \\end{frontmatter}." });
   }
 
   if (beginDocument && beginFrontmatter.index < beginDocument.index) {
     const pos = lineColAtOffset(clean, beginFrontmatter.index);
     findings.push({
       severity: "error",
-      ruleId: "TOC021",
+      ruleId: "TOC022",
       file: mainTex.path,
       ...pos,
       message: "frontmatter appears before \\begin{document}.",
@@ -372,7 +372,7 @@ function ruleFrontmatter({ mainTex }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, beginFrontmatter.index);
       findings.push({
         severity: "warning",
-        ruleId: "TOC022",
+        ruleId: "TOC023",
         file: mainTex.path,
         ...pos,
         message: "frontmatter is not immediately after \\begin{document}.",
@@ -383,7 +383,7 @@ function ruleFrontmatter({ mainTex }: RuleContext): Finding[] {
   const abstractStart = /\\begin\s*\{abstract\}/.exec(clean);
   const abstractEnd = /\\end\s*\{abstract\}/.exec(clean);
   if (!abstractStart || !abstractEnd) {
-    findings.push({ severity: "error", ruleId: "TOC023", file: mainTex.path, message: "Missing abstract environment." });
+    findings.push({ severity: "error", ruleId: "TOC024", file: mainTex.path, message: "Missing abstract environment." });
     return findings;
   }
 
@@ -391,7 +391,7 @@ function ruleFrontmatter({ mainTex }: RuleContext): Finding[] {
     const pos = lineColAtOffset(clean, abstractStart.index);
     findings.push({
       severity: "error",
-      ruleId: "TOC024",
+      ruleId: "TOC025",
       file: mainTex.path,
       ...pos,
       message: "The abstract should be inside the frontmatter environment.",
@@ -404,7 +404,7 @@ function ruleFrontmatter({ mainTex }: RuleContext): Finding[] {
     const pos = lineColAtOffset(clean, offset);
     findings.push({
       severity: "warning",
-      ruleId: "TOC025",
+      ruleId: "TOC026",
       file: mainTex.path,
       ...pos,
       message: "The abstract contains a citation/reference command.",
@@ -426,7 +426,7 @@ function ruleForbiddenMacros({ project, journalFiles }: RuleContext): Finding[] 
       const pos = lineColAtOffset(clean, match.index ?? 0);
       findings.push({
         severity: "error",
-        ruleId: "TOC026",
+        ruleId: "TOC027",
         file: file.path,
         ...pos,
         message: "Do not use \\def.",
@@ -439,7 +439,7 @@ function ruleForbiddenMacros({ project, journalFiles }: RuleContext): Finding[] 
       const pos = lineColAtOffset(clean, match.index ?? 0);
       findings.push({
         severity: "error",
-        ruleId: "TOC027",
+        ruleId: "TOC028",
         file: file.path,
         ...pos,
         message: "Do not use \\renewcommand.",
@@ -470,7 +470,7 @@ function ruleDeadTextMarkers({ project, journalFiles }: RuleContext): Finding[] 
         const pos = lineColAtOffset(clean, match.index ?? 0);
         findings.push({
           severity: "warning",
-          ruleId: "TOC028",
+          ruleId: "TOC029",
           file: file.path,
           ...pos,
           message,
@@ -490,7 +490,7 @@ function ruleBibliography({ mainTex, project }: RuleContext): Finding[] {
   if (!/\\bibliographystyle\s*\{tocplain\}/.test(clean)) {
     findings.push({
       severity: "error",
-      ruleId: "TOC029",
+      ruleId: "TOC030",
       file: mainTex.path,
       message: "Missing \\bibliographystyle{tocplain}.",
     });
@@ -498,7 +498,7 @@ function ruleBibliography({ mainTex, project }: RuleContext): Finding[] {
 
   const bibCommands = findCommandArgs(clean, "\\bibliography");
   if (bibCommands.length === 0) {
-    findings.push({ severity: "error", ruleId: "TOC030", file: mainTex.path, message: "Missing \\bibliography{...}." });
+    findings.push({ severity: "error", ruleId: "TOC031", file: mainTex.path, message: "Missing \\bibliography{...}." });
     return findings;
   }
 
@@ -510,7 +510,7 @@ function ruleBibliography({ mainTex, project }: RuleContext): Finding[] {
         const pos = lineColAtOffset(clean, cmd.match.index ?? 0);
         findings.push({
           severity: "error",
-          ruleId: "TOC031",
+          ruleId: "TOC032",
           file: mainTex.path,
           ...pos,
           message: `Bibliography file \`${expected}\` is referenced but was not found in the upload.`,
@@ -526,7 +526,7 @@ function ruleBibliography({ mainTex, project }: RuleContext): Finding[] {
     const pos = lineColAtOffset(clean, appendix.index);
     findings.push({
       severity: "warning",
-      ruleId: "TOC032",
+      ruleId: "TOC033",
       file: mainTex.path,
       ...pos,
       message: "An appendix appears after the bibliography.",
@@ -562,7 +562,7 @@ function ruleUnusedCitations({ project, journalFiles }: RuleContext): Finding[] 
       const pos = lineColAtOffset(text, entry.index);
       findings.push({
         severity: "warning",
-        ruleId: "TOC042",
+        ruleId: "TOC034",
         file: file.path,
         ...pos,
         message: `Bibliography entry \`${entry.key}\` is never cited in the text.`,
@@ -624,7 +624,7 @@ function ruleInputFiles({ mainTex, project }: RuleContext): Finding[] {
         const pos = lineColAtOffset(clean, cmd.match.index ?? 0);
         findings.push({
           severity: "error",
-          ruleId: "TOC033",
+          ruleId: "TOC035",
           file: mainTex.path,
           ...pos,
           message: `Referenced input file \`${requested}\` was not found in the upload.`,
@@ -654,7 +654,7 @@ function ruleReferences({ project, journalFiles }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, start);
       findings.push({
         severity: "warning",
-        ruleId: "TOC034",
+        ruleId: "TOC036",
         file: file.path,
         ...pos,
         message: "Direct \\ref found.",
@@ -680,7 +680,7 @@ function ruleGraphics({ project, journalFiles }: RuleContext): Finding[] {
       if (!found) {
         findings.push({
           severity: "error",
-          ruleId: "TOC035",
+          ruleId: "TOC037",
           file: file.path,
           ...pos,
           message: `Graphic file \`${requested}\` was not found in the upload.`,
@@ -689,7 +689,7 @@ function ruleGraphics({ project, journalFiles }: RuleContext): Finding[] {
       } else if (![".pdf", ""].includes(fileExtension(found.path))) {
         findings.push({
           severity: "error",
-          ruleId: "TOC036",
+          ruleId: "TOC038",
           file: file.path,
           ...pos,
           message: `Graphic \`${found.path}\` is not a PDF.`,
@@ -726,7 +726,7 @@ function ruleAuthorConsistency({ mainTex }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, authorIndex >= 0 ? authorIndex : 0);
       findings.push({
         severity: "warning",
-        ruleId: "TOC037",
+        ruleId: "TOC039",
         file: mainTex.path,
         ...pos,
         message: "Author names in frontmatter do not exactly match the author field in \\tocdetails.",
@@ -746,7 +746,7 @@ function ruleAuthorConsistency({ mainTex }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, about.index);
       findings.push({
         severity: "error",
-        ruleId: "TOC038",
+        ruleId: "TOC040",
         file: mainTex.path,
         ...pos,
         message: `tocabout label \`${about.label}\` does not match any author/tocinfo label.`,
@@ -762,7 +762,7 @@ function ruleAuthorConsistency({ mainTex }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, info.index);
       findings.push({
         severity: "error",
-        ruleId: "TOC039",
+        ruleId: "TOC041",
         file: mainTex.path,
         ...pos,
         message: `tocinfo label \`${info.label}\` has no matching tocabout block.`,
@@ -787,7 +787,7 @@ function ruleJournalFiles({ project, journalFiles }: RuleContext): Finding[] {
     if (normalizeStyleSource(file.text) !== canonical) {
       findings.push({
         severity: "warning",
-        ruleId: "TOC040",
+        ruleId: "TOC042",
         file: file.path,
         message: `Journal file \`${basename(file.path)}\` differs from the official ToC distribution (toctex.zip).`,
         suggestion:
