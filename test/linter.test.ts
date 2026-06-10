@@ -145,6 +145,41 @@ describe("journal files", () => {
   });
 });
 
+describe("unused citations", () => {
+  function textFile(name: string, text: string): ProjectFile {
+    return { path: name, name, lowerPath: name.toLowerCase(), size: text.length, text };
+  }
+
+  const bib = [
+    "@article{used, title={Used}, author={A}}",
+    "@book{alsoused, title={Also}, author={B}}",
+    "@inproceedings{orphan, title={Orphan}, author={C}}",
+  ].join("\n\n");
+
+  it("flags a .bib entry that is never cited", () => {
+    const tex = "\\documentclass{toc}\n\\begin{document}\n\\cite{used}\\citep[p.~3]{alsoused}\n\\end{document}\n";
+    const project: Project = { rootName: "t", files: [textFile("paper.tex", tex), textFile("refs.bib", bib)] };
+    const findings = lintProject(project).findings.filter((f) => f.ruleId === "TOC042");
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("orphan");
+  });
+
+  it("does not flag anything when \\nocite{*} is present", () => {
+    const tex = "\\documentclass{toc}\n\\begin{document}\n\\nocite{*}\n\\end{document}\n";
+    const project: Project = { rootName: "t", files: [textFile("paper.tex", tex), textFile("refs.bib", bib)] };
+    const ids = new Set(lintProject(project).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC042")).toBe(false);
+  });
+
+  it("treats citation keys case-insensitively and ignores @string/@comment", () => {
+    const extras = '@string{j = "Journal"}\n@comment{ignored}\n@article{MixedCase, title={M}}';
+    const tex = "\\documentclass{toc}\n\\begin{document}\n\\cite{used,alsoused,orphan}\\citet{mixedcase}\n\\end{document}\n";
+    const project: Project = { rootName: "t", files: [textFile("paper.tex", tex), textFile("refs.bib", `${bib}\n\n${extras}`)] };
+    const ids = new Set(lintProject(project).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC042")).toBe(false);
+  });
+});
+
 describe("system artifacts", () => {
   it("recognizes common OS-generated paths", () => {
     expect(isSystemPath("__MACOSX/._paper.tex")).toBe(true);

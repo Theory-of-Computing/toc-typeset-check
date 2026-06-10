@@ -67,6 +67,7 @@ export const rules: Rule[] = [
   ruleForbiddenMacros,
   ruleDeadTextMarkers,
   ruleBibliography,
+  ruleUnusedCitations,
   ruleInputFiles,
   ruleReferences,
   ruleGraphics,
@@ -534,6 +535,80 @@ function ruleBibliography({ mainTex, project }: RuleContext): Finding[] {
   }
 
   return findings;
+}
+
+function ruleUnusedCitations({ project, journalFiles }: RuleContext): Finding[] {
+  // Collect every key referenced by a citation command across the author's .tex
+  // sources. We match any \...cite... command (\cite, \citep, \nocite, \textcite,
+  // …) so over-matching can only *add* keys, which suppresses warnings — the safe
+  // direction for a check meant to avoid false "unused" reports.
+  const cited = new Set<string>();
+  let citeAll = false;
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && f.lowerPath.endsWith(".tex") && !isIgnoredJournalFile(f, journalFiles),
+  )) {
+    if (collectCitedKeys(stripCommentsKeepLines(file.text ?? ""), cited)) citeAll = true;
+  }
+  // \nocite{*} deliberately includes the whole database; nothing is "unused".
+  if (citeAll) return [];
+
+  const findings: Finding[] = [];
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && f.lowerPath.endsWith(".bib") && !isIgnoredJournalFile(f, journalFiles),
+  )) {
+    const text = file.text ?? "";
+    for (const entry of collectBibEntries(text)) {
+      if (cited.has(entry.key.toLowerCase())) continue;
+      const pos = lineColAtOffset(text, entry.index);
+      findings.push({
+        severity: "warning",
+        ruleId: "TOC042",
+        file: file.path,
+        ...pos,
+        message: `Bibliography entry \`${entry.key}\` is never cited in the text.`,
+        evidence: `@${entry.type}{${entry.key}`,
+        suggestion: "Remove entries that are not cited, or add the missing \\cite. tocplain.bst only typesets cited works, so uncited entries just bloat the .bib source.",
+      });
+    }
+  }
+  return findings;
+}
+
+// Add every citation key found in `clean` to `into`; returns true if \nocite{*}
+// (cite-all) is present, in which case the caller should treat all entries as used.
+function collectCitedKeys(clean: string, into: Set<string>): boolean {
+  let citeAll = false;
+  for (const match of clean.matchAll(/\\[A-Za-z]*cite[A-Za-z]*\*?/g)) {
+    let i = (match.index ?? 0) + match[0].length;
+    // Skip whitespace and any optional [...] arguments before the key list.
+    for (;;) {
+      while (i < clean.length && /\s/.test(clean[i])) i += 1;
+      if (clean[i] !== "[") break;
+      const close = clean.indexOf("]", i);
+      if (close < 0) break;
+      i = close + 1;
+    }
+    if (clean[i] !== "{") continue;
+    const close = findMatchingBrace(clean, i);
+    if (close === undefined) continue;
+    for (const key of clean.slice(i + 1, close).split(",").map((k) => k.trim()).filter(Boolean)) {
+      if (key === "*") citeAll = true;
+      else into.add(key.toLowerCase());
+    }
+  }
+  return citeAll;
+}
+
+// BibTeX entries: @type{key, ...} or @type(key, ...). Free text between entries
+// is ignored by BibTeX (there is no % comment syntax), so we scan the raw source.
+function collectBibEntries(text: string): Array<{ type: string; key: string; index: number }> {
+  const out: Array<{ type: string; key: string; index: number }> = [];
+  for (const match of text.matchAll(/@(\w+)\s*[{(]\s*([^,\s}()]+)/g)) {
+    const type = match[1].toLowerCase();
+    if (type === "string" || type === "comment" || type === "preamble") continue;
+    out.push({ type, key: match[2], index: match.index ?? 0 });
+  }
+  return out;
 }
 
 function ruleInputFiles({ mainTex, project }: RuleContext): Finding[] {

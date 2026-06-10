@@ -89,6 +89,7 @@ export const ruleCatalog: RuleCategory[] = [
       { id: "TOC030", severity: "error", summary: "Missing \\bibliography{...}." },
       { id: "TOC031", severity: "error", summary: "A .bib file named in \\bibliography{...} is not present in the upload." },
       { id: "TOC032", severity: "warning", summary: "An appendix appears after the bibliography." },
+      { id: "TOC042", severity: "warning", summary: "A .bib entry is never cited in the text; uncited entries should be removed." },
     ],
   },
   {
