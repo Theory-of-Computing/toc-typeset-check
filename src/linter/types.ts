@@ -12,6 +12,9 @@ export type ProjectFile = {
 export type Project = {
   rootName: string;
   files: ProjectFile[];
+  // Paths of system-generated entries (e.g. __MACOSX/, .DS_Store) that were
+  // excluded from `files` and should be reported for removal.
+  ignoredSystemPaths?: string[];
 };
 
 export type Finding = {

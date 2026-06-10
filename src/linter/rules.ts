@@ -1,5 +1,5 @@
 import type { Finding, Project, ProjectFile, Rule, RuleContext } from "./types";
-import { basename, fileExtension, fileExists, findFile } from "./project";
+import { basename, fileExtension, fileExists, findFile, systemArtifactLabel } from "./project";
 import {
   findCommandArgs,
   findMatchingBrace,
@@ -34,6 +34,7 @@ const generatedExtensions = new Set([
 const placeholderValues = new Set(["NN", "XXXXNN", "ACM Classifications", "AMS Classifications", "TODO", "TBD", "???"]);
 
 export const rules: Rule[] = [
+  ruleSystemArtifacts,
   ruleProjectStructure,
   ruleMainDocumentShape,
   ruleTocDetails,
@@ -50,6 +51,24 @@ export const rules: Rule[] = [
 
 export function runRules(ctx: RuleContext): Finding[] {
   return rules.flatMap((rule) => rule(ctx)).sort(compareFindings);
+}
+
+function ruleSystemArtifacts({ project }: RuleContext): Finding[] {
+  const paths = project.ignoredSystemPaths ?? [];
+  if (paths.length === 0) return [];
+
+  const labels = [...new Set(paths.map(systemArtifactLabel))].sort();
+  const shown = labels.slice(0, 12).join(", ") + (labels.length > 12 ? ", …" : "");
+  return [
+    {
+      severity: "warning",
+      ruleId: "TOC041",
+      message: "The upload contains system-generated files or folders that should be removed from the zip.",
+      evidence: shown,
+      suggestion:
+        "These are added automatically by the operating system (e.g. macOS __MACOSX/ and .DS_Store, Windows Thumbs.db). Recreate the archive without them, for example `zip -r -X paper.zip <files>`, or delete them before zipping.",
+    },
+  ];
 }
 
 function ruleProjectStructure({ project, mainTex }: RuleContext): Finding[] {

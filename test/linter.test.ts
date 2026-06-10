@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 import { lintProject } from "../src/linter/run";
 import { allRuleDocs } from "../src/linter/catalog";
 import { parseToctexZip } from "../src/linter/toctex";
+import { isSystemPath } from "../src/linter/project";
 import type { Project, ProjectFile } from "../src/linter/types";
 
 function loadFixture(name: string): Project {
@@ -89,5 +90,29 @@ describe("journal files", () => {
     const modified: Project = { rootName: "t", files: [textFile("eprint.sty", `${canonical!}\n\\def\\x{y}`)] };
     const modifiedIds = new Set(lintProject(modified, journalFiles).findings.map((f) => f.ruleId));
     expect(modifiedIds.has("TOC040")).toBe(true);
+  });
+});
+
+describe("system artifacts", () => {
+  it("recognizes common OS-generated paths", () => {
+    expect(isSystemPath("__MACOSX/._paper.tex")).toBe(true);
+    expect(isSystemPath("paper/.DS_Store")).toBe(true);
+    expect(isSystemPath("._paper.tex")).toBe(true);
+    expect(isSystemPath("Thumbs.db")).toBe(true);
+    expect(isSystemPath("dir/desktop.ini")).toBe(true);
+    expect(isSystemPath("paper.tex")).toBe(false);
+    expect(isSystemPath("src/macros.sty")).toBe(false);
+  });
+
+  it("warns when system artifacts were present in the upload", () => {
+    const project: Project = {
+      rootName: "t",
+      files: [],
+      ignoredSystemPaths: ["__MACOSX/._paper.tex", "__MACOSX/._fig.pdf", "paper/.DS_Store"],
+    };
+    const findings = lintProject(project).findings.filter((f) => f.ruleId === "TOC041");
+    expect(findings).toHaveLength(1);
+    expect(findings[0].evidence).toContain("__MACOSX/");
+    expect(findings[0].evidence).toContain(".DS_Store");
   });
 });

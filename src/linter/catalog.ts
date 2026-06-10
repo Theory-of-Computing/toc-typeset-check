@@ -29,6 +29,7 @@ export const ruleCatalog: RuleCategory[] = [
       { id: "TOC007", severity: "warning", summary: "A .bbl file is included, but the package should build from .bib." },
       { id: "TOC008", severity: "error", summary: "A required support file is missing (packages.sty or aumacros.sty)." },
       { id: "TOC009", severity: "error", summary: "No .tex source file was found at all." },
+      { id: "TOC041", severity: "warning", summary: "The upload contains system-generated files or folders (e.g. macOS __MACOSX/, .DS_Store; Windows Thumbs.db) that should be removed from the zip." },
     ],
   },
   {

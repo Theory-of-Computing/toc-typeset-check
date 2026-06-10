@@ -5,6 +5,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import JSZip from "jszip";
 import { lintProject, summarizeFindings } from "../src/linter/run.ts";
+import { isSystemPath } from "../src/linter/project.ts";
 import { parseToctexZip } from "../src/linter/toctex.ts";
 
 const TEXT_EXTENSIONS = new Set([".tex", ".sty", ".bib", ".cls", ".bst", ".txt", ".md"]);
@@ -19,8 +20,13 @@ function ext(p) {
 const zipPath = process.argv[2];
 const zip = await JSZip.loadAsync(readFileSync(zipPath));
 const files = [];
+const ignoredSystemPaths = [];
 for (const entry of Object.values(zip.files)) {
   if (entry.dir) continue;
+  if (isSystemPath(entry.name)) {
+    ignoredSystemPaths.push(entry.name);
+    continue;
+  }
   const bytes = new Uint8Array(await entry.async("uint8array"));
   const lowerPath = entry.name.toLowerCase();
   const f = {
@@ -38,7 +44,7 @@ for (const entry of Object.values(zip.files)) {
 const toctexPath = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "toctex.zip");
 const journalFiles = existsSync(toctexPath) ? await parseToctexZip(readFileSync(toctexPath)) : new Map();
 
-const project = { rootName: zipPath, files };
+const project = { rootName: zipPath, files, ignoredSystemPaths };
 const { mainTexPath, findings } = lintProject(project, journalFiles);
 const counts = summarizeFindings(findings);
 
