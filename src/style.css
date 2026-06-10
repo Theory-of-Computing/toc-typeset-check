@@ -120,3 +120,38 @@ pre {
 .suggestion {
   color: #334155;
 }
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Secondary, de-emphasized: a reference link, not the primary upload action. */
+.rules-link {
+  margin-left: auto;
+  padding-left: 1rem;
+  border-left: 1px solid #e5e7eb;
+  color: #64748b;
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.rules-link:hover {
+  color: #334155;
+  text-decoration: underline;
+}
+
+.rule-category {
+  margin-top: 1.5rem;
+}
+
+.rule-category h2 {
+  margin-bottom: 0.25rem;
+}
+
+.category-desc {
+  color: #64748b;
+  margin-top: 0;
+}
