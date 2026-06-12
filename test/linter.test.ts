@@ -189,7 +189,7 @@ describe("toc-template.tex", () => {
     };
   }
 
-  const templateText = readFileSync(join(__dirname, "../toc-template.tex"), "utf8");
+  const templateText = readFileSync(join(__dirname, "../public/toc-template.tex"), "utf8");
 
   it("produces no errors for the official template uploaded as a single .tex", () => {
     const errors = lintProject(singleTex("toc-template.tex", templateText)).findings.filter((f) => f.severity === "error");
