@@ -180,6 +180,62 @@ describe("unused citations", () => {
   });
 });
 
+describe("toc-template.tex", () => {
+  function singleTex(name: string, text: string): Project {
+    return {
+      rootName: name,
+      singleFile: true,
+      files: [{ path: name, name, lowerPath: name.toLowerCase(), size: text.length, text }],
+    };
+  }
+
+  const templateText = readFileSync(join(__dirname, "../toc-template.tex"), "utf8");
+
+  it("produces no errors for the official template uploaded as a single .tex", () => {
+    const errors = lintProject(singleTex("toc-template.tex", templateText)).findings.filter((f) => f.severity === "error");
+    expect(errors).toEqual([]);
+  });
+
+  it("does not flag the author+editor two \\tocdetails blocks as a duplicate", () => {
+    const ids = new Set(lintProject(singleTex("toc-template.tex", templateText)).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC016")).toBe(false);
+  });
+
+  it("does not flag the \\iffalse block marked DON'T TOUCH THIS LINE", () => {
+    const ids = new Set(lintProject(singleTex("toc-template.tex", templateText)).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC029")).toBe(false);
+  });
+
+  it("still flags two populated author \\tocdetails blocks", () => {
+    const tex = "\\documentclass{toc}\n\\tocdetails{title={A}}\n\\tocdetails{title={B}}\n\\begin{document}\\end{document}\n";
+    const ids = new Set(lintProject(singleTex("p.tex", tex)).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC016")).toBe(true);
+  });
+
+  it("still flags a plain \\iffalse block without the template marker", () => {
+    const tex = "\\documentclass{toc}\n\\begin{document}\n\\iffalse\nold proof\n\\fi\n\\end{document}\n";
+    const ids = new Set(lintProject(singleTex("p.tex", tex)).findings.map((f) => f.ruleId));
+    expect(ids.has("TOC029")).toBe(true);
+  });
+
+  it("reports missing companion files only for a full package, not a single .tex", () => {
+    const single = new Set(lintProject(singleTex("toc-template.tex", templateText)).findings.map((f) => f.ruleId));
+    expect(single.has("TOC043")).toBe(true); // note that checks were skipped
+    expect(single.has("TOC005")).toBe(false); // no .bib, but not reported
+    expect(single.has("TOC008")).toBe(false); // missing packages.sty/aumacros.sty, not reported
+    expect(single.has("TOC032")).toBe(false); // yourbibfile.bib not found, not reported
+
+    // The same source as part of a package: the missing files are real errors.
+    const pkg: Project = {
+      rootName: "p",
+      files: [{ path: "paper.tex", name: "paper.tex", lowerPath: "paper.tex", size: templateText.length, text: templateText }],
+    };
+    const multi = new Set(lintProject(pkg).findings.map((f) => f.ruleId));
+    expect(multi.has("TOC005")).toBe(true);
+    expect(multi.has("TOC032")).toBe(true);
+  });
+});
+
 describe("system artifacts", () => {
   it("recognizes common OS-generated paths", () => {
     expect(isSystemPath("__MACOSX/._paper.tex")).toBe(true);

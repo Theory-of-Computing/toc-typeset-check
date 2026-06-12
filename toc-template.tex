@@ -1,0 +1,323 @@
+%% toc-template.tex v0.5 2021-10-03 (last updated LB)
+
+%% AUTHOR:
+%% 1. Fill in the sections marked with triple exclamation marks !!!
+%% 2. Place the following files in the same directory:
+%%      toc.cls, tocbase.cls, tocplain.bst, and the article's source files
+%% 3. Compile with "pdflatex"
+%%      
+%% 4. To include figures, uncomment "\usepackage{graphicx}" below, and use
+%%    \begin{figure}[ht]
+%%    \begin{center}
+%%    \includegraphics[width=2in]{filename}
+%%    \end{center}
+%%    \caption{!!!}
+%%    \label{fig:labeloffigure}
+%%    \end{figure}
+%%   Figures should be created in a _vector_ editing program, 
+%%   such as the highly recommended IPE http://tclab.kaist.ac.kr/ipe/ 
+%%   or the powerful language TikZ http://www.texample.net/tikz/.
+%%   Do not use pixel-editing software like Paint or Photoshop,
+%%     and also try to avoid PowerPoint. 
+%%   We also discourage use of pstricks. 
+%%   If for some reason your figures are in EPS format, convert to PDF
+%%      using "epstopdf"
+
+%!!! ToC#1XXX   %% replace 1XXX with the actual number -- example: ToC#1078
+
+\documentclass{toc}
+
+%% !!! AUTHOR: Fill in meta-data below
+%% Optional items are marked %OPL, followed by explanation "if (when to use)"
+%% if using optional item, delete "%OPL"
+\tocdetails{%
+  title = {full title of paper here},
+%OPL  runningtitle = {short title to fit page headers}, %% if title long
+%OPL  plaintexttitle = {title without LaTeX}, %% if title uses LaTeX
+%
+  number_of_pages = {NN}, 
+  number_of_bibitems = {NN},
+  number_of_figures = {NN},
+  conference_version = {XXXXNN}, %% examples: {EC17},  {FSTTCS18}, {NONE}
+    %% add "?" if submitted but no decision yet -- example: {CCC21?}
+    %% please remember to notify editors if conf status changes
+%OPL  conf_spec_issue,    %%  if conf spec issue article
+%OPL  thematic_spec_issue = {title of spec issue},  %% if thematic spec issue  
+%OPL  invited,   %% if paper invited by ToC editors but NOT spec issue
+  author = {Author A, Author B, and Author C},
+    %% Use the format
+    %% "A", or "A and B", or "A, B, and C", or "A, B, C, and D", etc.
+    %% e.g., {Author A, Author B, and K\'alm\'an Sz\H{o}l\H{o}ssy},
+    %% IMPORTANT: Please use ascii TeX codes for characaters with
+    %% foreign accents.
+  authorlist = {Author A, Author B, Author C},
+    %% Comma separated author list, NO AND: Use the format
+    %% "A", or "A, B", or "A, B, C", etc.
+    %% NOTE: No "and" at the end--simply comma separated,
+    %% e.g., {Author A, Author B, K\'alm\'an Sz\H{o}l\H{o}ssy},
+    %
+    %% IF AUTHOR LIST LONG: add one or both optional entries below
+    %% where the first name has been replaced with an initial.
+%OPL  runningauthor = {A. Author, B. Author, and C. Author},
+%OPL  copyrightauthor = {A. Author, B. Author, and C. Author},
+  %% for some composite last names, the alphabetic position of
+  %% the author's name is not the first letter of the last name
+  %% for instance, Ronald de Wolf's last name is "de Wolf"
+  %% but the alphabetic position of his last name is "W"
+%OPL alphabetic_position = {N, X} %% example: {3, W} if 3rd author "de Wolf" 
+  acmclassification = {ACM Classifications},
+    %% Use the format "X.N.N, Y.N.N, ..., Z.N.N"; no period at end.
+    %% See below for common ACM classifications.
+  amsclassification = {AMS Classifications},
+    %% Use the format "NNXNN, NNYNN, ..., NNZNN"; no period at end.
+    %% See below for common AMS Classifications.
+  keywords = {keyword, keyword, keyword},
+    %% keywords and phrases of your choice, lower case, comma separated,
+    %% no period at end
+    %% please consider using relevant ToC categories -- see
+    %%    http://theoryofcomputing.org/categories
+    %    
+}   %% END AUTHOR-FILLED METADATA
+
+    %%% Common ToC ACM Classifications:
+    %%% 
+    %%% F.2.2 (Nonnumerical Algorithms and Problems)
+    %%% F.1.3 (Complexity Measures and Classes)
+    %%% G.3   (PROBABILITY AND STATISTICS)
+    %%% F.1.2 (Modes of Computation)
+    %%% G.2.2 (Graph Theory)
+    %%% G.1.6 (Optimization)
+    %%% F.2.3 (Tradeoffs between Complexity Measures)
+    %%% F.2.1 (Numerical Algorithms and Problems)
+    %%%
+    %%% Common ToC AMS categories:
+    %%% 68Q17 (Computational difficulty of problems (lower bounds, 
+    %%% completeness, difficulty of approximation, etc.)
+    %%% 68W25 (Approximation algorithms)
+    %%% 81P68 (Quantum computation and quantum cryptography)
+    %%% 68W20 (Randomized algorithms)
+    %%% 68Q15 (Complexity classes (hierarchies, relations among 
+    %%% complexity classes, etc.))
+    %%% 68Q25 (Analysis of algorithms and problem complexity)
+    %%% 68R10 (Graph theory)
+    %%% 03F20 (Complexity of proofs)
+    %%% 68Q32 (Computational learning theory)
+    %%% 90C59 (Approximation methods and heuristics)
+    %%% 
+    %%% Full list available at:
+    %%% http://www.acm.org/about/class/1998
+    %%% http://www.ams.org/msc/
+    %%% 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% EDITOR: Fill in meta-data below
+\tocdetails{%
+%  volume = 1X,      %% example:  volume = 16,
+%  number = Y,       %% examples: number = 5,    number = 19,
+%  year = 20ZZ,
+%  specissue={\cccBH},  %% CCC'17
+%  specissue={\cccBI},  %% CCC'18
+%  specissue={\cccBJ},  %% CCC'19
+%  specissue={\cccCA},  %% CCC'20
+%  specissue={\cccCB},  %% CCC'21
+%  specissue={\cccCC},  %% CCC'22
+%  specissue={\approxrandomBG},  %% APPROX-RANDOM'16
+%  specissue={\randomBI},  %% RANDOM'18
+%  specissue={\approxrandomBJ},  %% APPROX-RANDOM'19
+%  specissue={\approxrandomCA},  %% APPROX-RANDOM'20
+%  specissue={\approxrandomCB},  %% APPROX-RANDOM'21
+%  received = {date}, %% example: June 17, 2019
+%  revised = {date},
+%  published = {date},
+%  note,
+%  survey,  %% this item refers to "research survey", not "grad survey"
+%  exposition, %% refers to "research exposition"
+%  doi = {10.4086/toc.20XX.v0XX.a0XX},
+       %% format: doi = {10.4086/toc.2018.v014a009}
+}   %% END tocdetails
+
+%%% !!!AUTHOR: add macro packages in a separate "packages.sty" file
+%%% Please add as few packages as possible
+%%% Please avoid packages that interfere with ToC formatting
+%%% Do not include the packages    amsmath, amsthm
+%%% -- these are automatically loaded by the "toc" class
+% \usepackage{graphicx}"   %%% !!! uncomment this if you include figures
+
+%%% !!!AUTHOR: put your marco definitions in a separate "aumacros.sty" file
+%%% PLEASE use as few of them as possible
+%%% custom macros make copyediting more difficult
+
+\begin{document}
+
+\begin{frontmatter}%%[classification=text] << EDITOR.
+
+%% EDITOR: If abstract fits entirely on first page, you may consider
+%% the "classification=text" option, which typesets classifications
+%% (as text) directly after the abstract--a preferable arrangement.
+
+%%% !!! AUTHOR Title goes here
+\title{title of paper here}  %% if conf version exists, see below
+
+%%% !!! If a conference version exists, use instead the following
+%%%   (after replacing the conference name)
+
+%OPL  \title{TITLE OF PAPER\titlefootnote{XXX of this paper appeared in
+%OPL  the \href{http://URL}{Proceedings of the 26th IEEE Conference on
+%OPL  Computational Complexity, 2011}~\cite{conf-version}.}}
+%OPL  preferable URL:  http://doi.org/[DOI]   %% if DOI available
+%OPL  Please add the conference version to your bibliography
+%OPL  and name it     @inproceedings{conf-version,
+
+%%% !!! Replace XXX by one of the following phrases: 
+%%%   An extended abstract (if the current version adds or significantly 
+%%%         expands the proofs of the main results stated in the conference
+%%%         version but most of the main results of the current paper have 
+%%%         already been (essentially) stated in the conference version);
+%%%   A preliminary version (if the current version contains significant
+%%%         new results or significant improvements over the results 
+%%%         stated in the conference version); 
+%%%   A conference version (in all other cases).
+%%% Appropriately modify this text if the paper descends from more than one
+%%% conference paper.   Make sure to include the conference version(s)
+%%% in the .bib file.
+
+
+%%% !!! AUTHOR List all authors. In brackets include the author's
+%%% **last name** in lower case with no special characters; this
+%%% will be used as the unique tag (author ID) to associate
+%%% the author with the correct bio sketch at the end of the paper.
+
+%%% List grant acknowledgements in \thanks.
+
+\author[surname]{Firstname Surname\thanks{Supported by...}}
+\author[szolossy]{K\'alm\'an Sz\H{o}l\H{o}ssy\thanks{Supported by...}}
+
+%%% !!! AUTHOR Dedication, if desired, goes here  
+%% \begin{dedication}
+%% !!!
+%% \end{dedication}
+
+%%%  !!! AUTHOR Abstract goes here
+%%%  limit your Abstract to 1920 characters to satisfy the arXiv standard
+%%%  the Abstract does not need to tell the full story; focus on
+%%%    your most striking contribution
+%%%  no \cite{...} commands in Abstract; citation format in abstract:
+%%%   (Jones and Kumar, STOC'14)
+%%%   if more than two authors: (Jones et al., STOC'14)
+%%%   if journal: (Jones et al., SICOMP 2014)
+\begin{abstract}
+  !!!
+\end{abstract}
+
+\iffalse % DON'T TOUCH THIS LINE
+%%%  AUTHOR: Choose the arXiv category that best fits your article.
+%%%  A complete list of computer science categories is available here:
+%%%     http://arxiv.org/archive/cs
+%%%  and in math
+%%%     http://arxiv.org/archive/math
+%%%  Common categories include:
+%%%     cs.CC - Computational Complexity
+%%%     cs.CR - Cryptography and Security 
+%%%     cs.DS - Data Structures and Algorithms
+%%%     cs.LG - Learning
+%%%     cs.IT - Information Theory 
+%%%     cs.DM - Discrete Mathematics 
+%%%     quant-ph - Quantum Physics
+%%%     math.PR - Probability
+%%%     math.CO - Combinatorics
+%%%  You must include at least one category. If you include more than one category, 
+%%%  the first one will serve as your main category, and the others will be used for
+%%%  crosslisting. 
+%%%
+%%%  Example:
+%%%  \tocarxivcategory{cs.CC,quant-ph}
+
+\tocarxivcategory{!!!}
+
+\fi % DON'T TOUCH THIS LINE
+
+\end{frontmatter}
+
+%%%
+%%% !!! AUTHOR
+%%% Paper goes here...
+
+
+\bibliographystyle{tocplain}   %%% \bibliographystyle{plain}
+
+%%% !!! AUTHOR
+%%% Change this to match the name of your BIB file
+\bibliography{yourbibfile}
+
+%%% !!! AUTHOR
+%%% Include a short description of each author's affiliation
+%%% following the structure below. Use the same unique ID used
+%%% previously (presumably lower case last name).
+%%% Use \tocat{} and \tocdot{} instead of "@" and "." in emails
+\begin{tocauthors}
+\begin{tocinfo}[surname]
+ Firstname Surname\\
+ Assistant professor\\
+ Department of Computer Science and\\
+ \ \ Department of Immunology\\
+ Exemplar University\\
+ Town, State/Province, Country\\
+ name\tocat{}cs\tocdot{}exemplar\tocdot{}edu \\   %% email address here
+ \url{http://cs.exemplar.edu/~surname}      %% your home page here
+\end{tocinfo}
+\begin{tocinfo}[szolossy]
+  K\'alm\'an Sz\H{o}l\H{o}ssy\\
+  Senior software engineer\\
+  Logspace, Inc.\\
+  Kecskem\'et, Hungary\\
+  kszolos\tocat{}ailab\tocdot{}logspace\tocdot{}hu \\
+  \url{http://www.logspace.hu/~kalman}
+\end{tocinfo}
+\end{tocauthors}
+
+%%% !!!!
+%%% Add a biographic sketch about each author.  The bio sections of
+%%% previously published papers also appear in HTML, for example,
+%%%   http://www.theoryofcomputing.org/articles/v003a009/about.html ).
+%%% Include basic info about your education, research, and career
+%%% (institutions, subject/title of dissertation, name of advisor, 
+%%% list of areas of interest in some detail ["complexity theory" won't
+%%% distinguish you from the majority of authors]).  Please also
+%%% include information not readily available from other sources,
+%%% like where you grew up, how you were first exposed to mathematics.
+%%% The bio sketch is especially a good place to recognize an early
+%%% mentor who helped turn your interest toward mathematics.  We also
+%%% encourage you to include some more personal information (family,
+%%% hobby, etc.).  Sprinkle it with humor.  IMPORTANT: Please include
+%%% links in the bio sketch (to your advisor's and your Alma Mater's
+%%% home page, your favorite hobby site, etc).  As far as links go,
+%%% the more, the merrier. Use the following syntax:
+%%%    Her advisor was \href{http://url}{name}.
+%%% IMPORTANT: please remember to use ascii TeX codes for characters
+%%% with a foreign accent.
+\begin{tocaboutauthors}
+\begin{tocabout}[surname]  %% use the same 
+  \textsc{Firstname Surname}, known to her friends as <nickname>,
+  graduated from
+  \href{https://en.wikipedia.org/wiki/URL}{Paragon University} in
+  1799; her advisor was
+  \href{https://en.wikipedia.org/wiki/Johann_Friedrich_Pfaff}{Johann
+    Friedrich Pfaff}. The subject of her thesis was integral rational
+    algebraic functions.  ... (positions help, research interests)...
+    Her attention was first turned to mathematics by her 7th grade
+    piano teacher \href{http://url}{Sophia Maria Westenholz},
+    a fan of math puzzles, with whom she spent ...  
+    She enjoys hiking in the
+   \href{https://en.wikipedia.org/wiki/Nilgiri_Mountains/}{Nilgiri Hills}.
+    In her spare time she sometimes reads
+  \href{http://theoryofcomputing.org}{\textsf{Theory of Computing}}.
+\end{tocabout}
+\begin{tocabout}[szolossy]
+\textsc{K\'alm\'an Sz\H{o}l\H{o}ssy} is another fictitious author
+whose name, with its copious accents, emphasizes the proper use
+of TeX ascii codes.
+\end{tocabout}
+\end{tocaboutauthors}
+
+\end{document}
+

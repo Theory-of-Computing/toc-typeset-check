@@ -58,6 +58,28 @@ const generatedExtensions = new Set([
 
 const placeholderValues = new Set(["NN", "XXXXNN", "ACM Classifications", "AMS Classifications", "TODO", "TBD", "???"]);
 
+// Keys that belong to the editor-only \tocdetails block in the ToC template
+// (the journal fills these in at acceptance). A \tocdetails block carrying only
+// these is the sanctioned second block, not a duplicate of the author's.
+const editorDetailKeys = new Set([
+  "volume",
+  "number",
+  "year",
+  "specissue",
+  "received",
+  "revised",
+  "published",
+  "note",
+  "survey",
+  "exposition",
+  "doi",
+]);
+
+function isEditorDetailsBlock(blockValue: string): boolean {
+  const keys = parseTopLevelKeyValues(blockValue).map((kv) => kv.key);
+  return keys.length === 0 || keys.every((key) => editorDetailKeys.has(key));
+}
+
 export const rules: Rule[] = [
   ruleSystemArtifacts,
   ruleProjectStructure,
@@ -99,6 +121,20 @@ function ruleSystemArtifacts({ project }: RuleContext): Finding[] {
 
 function ruleProjectStructure({ project, mainTex, journalFiles }: RuleContext): Finding[] {
   const findings: Finding[] = [];
+
+  // A bare .tex upload can't carry its .bib, support files, or figures, so we
+  // can't check the package is complete. Note it once and skip those checks
+  // rather than report files as "missing".
+  if (project.singleFile) {
+    findings.push({
+      severity: "info",
+      ruleId: "TOC043",
+      message: "Only a single .tex file was uploaded, so package-completeness checks were skipped.",
+      suggestion:
+        "Checks for the .bib database, packages.sty/aumacros.sty, figures, and \\input targets only run on a full source package. Upload the submission as a .zip to run them.",
+    });
+  }
+
   // Ignore the distribution's own .tex/.bib files (support files by name,
   // templates/examples only when unmodified); only count the author's sources.
   const texFiles = project.files.filter(
@@ -154,7 +190,7 @@ function ruleProjectStructure({ project, mainTex, journalFiles }: RuleContext): 
   );
   const bblFiles = project.files.filter((f) => f.lowerPath.endsWith(".bbl"));
 
-  if (bibFiles.length === 0) {
+  if (bibFiles.length === 0 && !project.singleFile) {
     findings.push({
       severity: "error",
       ruleId: "TOC005",
@@ -183,7 +219,7 @@ function ruleProjectStructure({ project, mainTex, journalFiles }: RuleContext): 
     });
   }
 
-  for (const required of ["packages.sty", "aumacros.sty"]) {
+  for (const required of project.singleFile ? [] : ["packages.sty", "aumacros.sty"]) {
     if (!project.files.some((f) => basename(f.path).toLowerCase() === required)) {
       findings.push({
         severity: "error",
@@ -260,8 +296,15 @@ function ruleTocDetails({ mainTex }: RuleContext): Finding[] {
     ];
   }
 
-  if (blocks.length > 1) {
-    for (const [i, block] of blocks.slice(1).entries()) {
+  // The official ToC template ships two \tocdetails blocks: one the author
+  // fills and a second, editor-only block (volume, number, doi, dates, …). Only
+  // count author blocks toward the duplicate check; a block whose populated keys
+  // are all editor keys — or that has none, i.e. the still-commented editor
+  // block — is the sanctioned editor block, not a duplicate.
+  const authorBlocks = blocks.filter((b) => !isEditorDetailsBlock(b.value));
+
+  if (authorBlocks.length > 1) {
+    for (const [i, block] of authorBlocks.slice(1).entries()) {
       const pos = lineColAtOffset(clean, block.match.index ?? 0);
       findings.push({
         severity: "error",
@@ -270,12 +313,13 @@ function ruleTocDetails({ mainTex }: RuleContext): Finding[] {
         ...pos,
         message: `Duplicate \\tocdetails block #${i + 2}.`,
         evidence: clean.slice(block.match.index ?? 0, Math.min(block.close + 1, (block.match.index ?? 0) + 120)),
-        suggestion: "Keep exactly one populated \\tocdetails block.",
+        suggestion: "Keep exactly one populated \\tocdetails block (the editor's volume/doi block is allowed in addition).",
       });
     }
   }
 
-  const first = blocks[0];
+  // Validate the author block (the editor block carries no author metadata).
+  const first = authorBlocks[0] ?? blocks[0];
   const beginDocument = /\\begin\s*\{document\}/.exec(clean);
   if (beginDocument && first.match.index !== undefined && first.match.index > beginDocument.index) {
     const pos = lineColAtOffset(clean, first.match.index);
@@ -464,9 +508,16 @@ function ruleDeadTextMarkers({ project, journalFiles }: RuleContext): Finding[] 
   for (const file of project.files.filter(
     (f) => f.text !== undefined && /\.(tex|sty|bib)$/i.test(f.path) && !isIgnoredJournalFile(f, journalFiles),
   )) {
-    const clean = stripCommentsKeepLines(file.text ?? "");
+    const original = file.text ?? "";
+    const clean = stripCommentsKeepLines(original);
     for (const { regex, message } of patterns) {
       for (const match of clean.matchAll(regex)) {
+        // The ToC template wraps its (intentional) arXiv-category block in
+        // \iffalse … \fi and marks both lines "DON'T TOUCH THIS LINE". Respect
+        // that author-intent marker — stripComments preserves offsets, so we can
+        // read the marker from the original source line. (The comment itself is
+        // blanked out in `clean`, so it's invisible to the regex.)
+        if (/DON'T TOUCH THIS LINE/i.test(lineAtOffset(original, match.index ?? 0))) continue;
         const pos = lineColAtOffset(clean, match.index ?? 0);
         findings.push({
           severity: "warning",
@@ -502,7 +553,7 @@ function ruleBibliography({ mainTex, project }: RuleContext): Finding[] {
     return findings;
   }
 
-  for (const cmd of bibCommands) {
+  for (const cmd of project.singleFile ? [] : bibCommands) {
     const bibNames = cmd.value.split(",").map((x) => x.trim()).filter(Boolean);
     for (const bibName of bibNames) {
       const expected = bibName.toLowerCase().endsWith(".bib") ? bibName : `${bibName}.bib`;
@@ -612,7 +663,7 @@ function collectBibEntries(text: string): Array<{ type: string; key: string; ind
 }
 
 function ruleInputFiles({ mainTex, project }: RuleContext): Finding[] {
-  if (!mainTex?.text) return [];
+  if (!mainTex?.text || project.singleFile) return [];
   const clean = stripCommentsKeepLines(mainTex.text);
   const findings: Finding[] = [];
 
@@ -678,6 +729,7 @@ function ruleGraphics({ project, journalFiles }: RuleContext): Finding[] {
       const pos = lineColAtOffset(clean, cmd.match.index ?? 0);
 
       if (!found) {
+        if (project.singleFile) continue; // companion figure files aren't in a bare .tex upload
         findings.push({
           severity: "error",
           ruleId: "TOC037",
@@ -812,6 +864,13 @@ function findGraphic(project: Project, relativeTo: string, requested: string): P
   }
 
   return undefined;
+}
+
+// The full source line containing `offset` (no surrounding newlines).
+function lineAtOffset(src: string, offset: number): string {
+  const start = src.lastIndexOf("\n", offset - 1) + 1;
+  const endRaw = src.indexOf("\n", offset);
+  return src.slice(start, endRaw < 0 ? src.length : endRaw);
 }
 
 function compareFindings(a: Finding, b: Finding): number {

@@ -30,6 +30,7 @@ export const ruleCatalog: RuleCategory[] = [
       { id: "TOC008", severity: "error", summary: "A required support file is missing (packages.sty or aumacros.sty)." },
       { id: "TOC009", severity: "error", summary: "No .tex source file was found at all." },
       { id: "TOC010", severity: "warning", summary: "The upload contains system-generated files or folders (e.g. macOS __MACOSX/, .DS_Store; Windows Thumbs.db) that should be removed from the zip." },
+      { id: "TOC043", severity: "info", summary: "Only a single .tex file was uploaded, so package-completeness checks (.bib, packages.sty/aumacros.sty, figures, \\input targets) were skipped; upload a .zip to run them." },
     ],
   },
   {

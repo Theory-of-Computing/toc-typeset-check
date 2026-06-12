@@ -15,6 +15,10 @@ export type Project = {
   // Paths of system-generated entries (e.g. __MACOSX/, .DS_Store) that were
   // excluded from `files` and should be reported for removal.
   ignoredSystemPaths?: string[];
+  // True when the upload was a bare .tex file rather than a source package, so
+  // companion files (.bib, packages.sty, figures, \input targets) cannot be
+  // present. Checks that a file is missing from the package are skipped.
+  singleFile?: boolean;
 };
 
 export type Finding = {

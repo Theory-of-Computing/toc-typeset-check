@@ -49,6 +49,7 @@ export async function readUpload(file: File): Promise<Project> {
   const text = await file.text();
   return {
     rootName: file.name,
+    singleFile: true,
     files: [
       {
         path: file.name,
