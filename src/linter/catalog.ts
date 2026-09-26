@@ -131,6 +131,13 @@ export const ruleCatalog: RuleCategory[] = [
       { id: "TOC042", severity: "warning", summary: "A ToC-provided style/class/bst file differs from the official distribution; it may have been modified or be from an older release." },
     ],
   },
+  {
+    title: "Math notation",
+    description: "Checks for common math typesetting errors in operator and bracket notation.",
+    rules: [
+      { id: "TOC044", severity: "warning", summary: "A math operator is defined with \\newcommand and a plain-text body; use \\DeclareMathOperator so the name renders upright with correct spacing." },
+    ],
+  },
 ];
 
 export const allRuleDocs: RuleDoc[] = ruleCatalog.flatMap((c) => c.rules);

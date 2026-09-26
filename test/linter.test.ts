@@ -51,6 +51,7 @@ describe("ToC linter MVP", () => {
     expect(ids.has("TOC027")).toBe(true); // \def
     expect(ids.has("TOC026")).toBe(true); // abstract cite
     expect(ids.has("TOC036")).toBe(true); // direct \ref
+    expect(ids.has("TOC044")).toBe(true); // operator defined with \newcommand plain-text body
   });
 });
 

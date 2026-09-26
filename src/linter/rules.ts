@@ -95,6 +95,7 @@ export const rules: Rule[] = [
   ruleGraphics,
   ruleAuthorConsistency,
   ruleJournalFiles,
+  ruleMathOperatorDefinition,
 ];
 
 export function runRules(ctx: RuleContext): Finding[] {
@@ -844,6 +845,34 @@ function ruleJournalFiles({ project, journalFiles }: RuleContext): Finding[] {
         message: `Journal file \`${basename(file.path)}\` differs from the official ToC distribution (toctex.zip).`,
         suggestion:
           "Do not modify ToC-provided style files. Replace it with the unmodified copy from toctex.zip, or, if you are on an older release, update to the current distribution.",
+      });
+    }
+  }
+  return findings;
+}
+
+const NEWCOMMAND_OPERATOR_BODY =
+  /\\newcommand\s*\{\\[A-Za-z]+\}(?:\[\d+\])?\s*\{(?:\{([a-z]{2,})\}|([a-z]{2,}))\}/g;
+
+function ruleMathOperatorDefinition({ project, journalFiles }: RuleContext): Finding[] {
+  const findings: Finding[] = [];
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && /\.(tex|sty)$/i.test(f.path) && !isIgnoredJournalFile(f, journalFiles),
+  )) {
+    const clean = stripCommentsKeepLines(file.text ?? "");
+    for (const match of clean.matchAll(NEWCOMMAND_OPERATOR_BODY)) {
+      const pos = lineColAtOffset(clean, match.index ?? 0);
+      const operatorName = match[1] ?? match[2];
+      const cmdMatch = match[0].match(/\{(\\[A-Za-z]+)\}/);
+      const cmdName = cmdMatch ? cmdMatch[1] : "";
+      findings.push({
+        severity: "warning",
+        ruleId: "TOC044",
+        file: file.path,
+        ...pos,
+        message: `Math operator \`${operatorName}\` is defined with \\newcommand; it will render in italic in math mode.`,
+        evidence: match[0].trim(),
+        suggestion: `Use \\DeclareMathOperator{${cmdName}}{${operatorName}} in the preamble so the operator renders upright with correct spacing.`,
       });
     }
   }
