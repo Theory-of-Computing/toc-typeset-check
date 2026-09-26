@@ -5,7 +5,9 @@ import { lintProject } from "../src/linter/run";
 import { allRuleDocs } from "../src/linter/catalog";
 import { parseToctexZip } from "../src/linter/toctex";
 import { isSystemPath } from "../src/linter/project";
-import type { Project, ProjectFile } from "../src/linter/types";
+import { buildProposals } from "../src/linter/fixes";
+import { applyTextFixes, applyFixes } from "../src/linter/apply";
+import type { Project, ProjectFile, TextFix, FileDeleteFix } from "../src/linter/types";
 
 function loadFixture(name: string): Project {
   const root = join(__dirname, "fixtures", name);
@@ -260,5 +262,322 @@ describe("system artifacts", () => {
     expect(findings).toHaveLength(1);
     expect(findings[0].evidence).toContain("__MACOSX/");
     expect(findings[0].evidence).toContain(".DS_Store");
+  });
+});
+
+// ── fix proposers ─────────────────────────────────────────────────────────────
+
+describe("fix proposers", () => {
+  function tex(name: string, text: string): ProjectFile {
+    return { path: name, name, lowerPath: name.toLowerCase(), size: text.length, text };
+  }
+
+  function singleProject(content: string): Project {
+    return { rootName: "paper.tex", singleFile: true, files: [tex("paper.tex", content)] };
+  }
+
+  // Helper: run linter, find the proposal for a specific rule, return its first fix.
+  function firstFix(project: Project, ruleId: string, journalFiles = new Map<string, string>()) {
+    const { findings } = lintProject(project, journalFiles);
+    const proposals = buildProposals(findings, project, journalFiles);
+    const proposal = proposals.find((p) => p.finding.ruleId === ruleId);
+    return { proposal, fix: proposal?.fixes?.[0] };
+  }
+
+  it("TOC044 — proposes \\DeclareMathOperator for \\newcommand operator", () => {
+    const src = "\\documentclass{toc}\n\\newcommand{\\rank}{rank}\n\\begin{document}\\end{document}";
+    const { fix } = firstFix(singleProject(src), "TOC044");
+    expect(fix?.kind).toBe("text");
+    const tf = fix as TextFix;
+    expect(tf.oldText).toBe("\\newcommand{\\rank}{rank}");
+    expect(tf.newText).toBe("\\DeclareMathOperator{\\rank}{rank}");
+    // Fix is located at the right offset
+    expect(src.slice(tf.offset, tf.offset + tf.length)).toBe(tf.oldText);
+  });
+
+  it("TOC046 — proposes \\langle...\\rangle for <a, b>", () => {
+    const src = "\\documentclass{toc}\n\\begin{document}\n$<u, v>$\n\\end{document}";
+    const { fix } = firstFix(singleProject(src), "TOC046");
+    expect(fix?.kind).toBe("text");
+    const tf = fix as TextFix;
+    expect(tf.newText).toBe("\\langle u, v \\rangle");
+    expect(src.slice(tf.offset, tf.offset + tf.length)).toBe(tf.oldText);
+  });
+
+  it("TOC045 — interactive when operator not defined in preamble", () => {
+    const src = "\\documentclass{toc}\n\\begin{document}\n$rank(A) = 1$\n\\end{document}";
+    const project = singleProject(src);
+    const { findings } = lintProject(project);
+    const toc045 = findings.filter((f) => f.ruleId === "TOC045");
+    expect(toc045.length).toBeGreaterThan(0);
+    const proposals = buildProposals(toc045, project, new Map());
+    expect(proposals[0].tier).toBe("interactive");
+    expect(proposals[0].fixes).toBeUndefined();
+  });
+
+  it("TOC045 — auto-fix when operator is defined via \\DeclareMathOperator", () => {
+    const src =
+      "\\documentclass{toc}\n\\DeclareMathOperator{\\rank}{rank}\n\\begin{document}\n$rank(A) = 1$\n\\end{document}";
+    const project = singleProject(src);
+    const { findings } = lintProject(project);
+    const toc045 = findings.filter((f) => f.ruleId === "TOC045");
+    expect(toc045.length).toBeGreaterThan(0);
+    const proposals = buildProposals(toc045, project, new Map());
+    expect(proposals[0].tier).toBe("auto");
+    expect(proposals[0].fixes).toBeDefined();
+    const fix = proposals[0].fixes![0];
+    expect(fix.kind).toBe("text");
+    if (fix.kind === "text") {
+      expect(fix.newText).toBe("\\rank");
+    }
+  });
+
+  it("TOC045 — auto-fix when operator is defined via \\newcommand", () => {
+    const src =
+      "\\documentclass{toc}\n\\newcommand{\\rank}{rank}\n\\begin{document}\n$rank(A) = 1$\n\\end{document}";
+    const project = singleProject(src);
+    const { findings } = lintProject(project);
+    const toc045 = findings.filter((f) => f.ruleId === "TOC045");
+    expect(toc045.length).toBeGreaterThan(0);
+    const proposals = buildProposals(toc045, project, new Map());
+    expect(proposals[0].tier).toBe("auto");
+  });
+
+  it("TOC012 — proposes \\documentclass{toc} preserving options", () => {
+    const src = "\\documentclass[12pt]{article}\n\\begin{document}\\end{document}";
+    const project: Project = { rootName: "p", files: [tex("paper.tex", src)] };
+    const { fix } = firstFix(project, "TOC012");
+    expect(fix?.kind).toBe("text");
+    const tf = fix as TextFix;
+    expect(tf.newText).toBe("\\documentclass[12pt]{toc}");
+    expect(src.slice(tf.offset, tf.offset + tf.length)).toBe(tf.oldText);
+  });
+
+  it("TOC030 — inserts \\bibliographystyle{tocplain} before \\bibliography", () => {
+    const src = "\\documentclass{toc}\n\\begin{document}\n\\bibliography{refs}\n\\end{document}";
+    const project: Project = { rootName: "p", files: [tex("paper.tex", src)] };
+    const { findings } = lintProject(project);
+    const proposals = buildProposals(findings, project, new Map());
+    const prop = proposals.find((p) => p.finding.ruleId === "TOC030");
+    const fix = prop?.fixes?.[0] as TextFix | undefined;
+    expect(fix?.kind).toBe("text");
+    expect(fix?.newText).toContain("\\bibliographystyle{tocplain}");
+    expect(fix?.newText).toContain("\\bibliography{refs}");
+    expect(src.slice(fix!.offset, fix!.offset + fix!.length)).toBe("\\bibliography{refs}");
+  });
+
+  it("TOC004 — proposes deleting generated files", () => {
+    const project: Project = {
+      rootName: "p",
+      files: [tex("paper.tex", ""), tex("paper.aux", ""), tex("paper.log", "")],
+    };
+    const { findings } = lintProject(project);
+    const proposals = buildProposals(findings, project, new Map());
+    const prop = proposals.find((p) => p.finding.ruleId === "TOC004");
+    expect(prop?.fixes?.length).toBeGreaterThanOrEqual(2);
+    const deletedFiles = prop!.fixes!.map((f) => (f as FileDeleteFix).file);
+    expect(deletedFiles).toContain("paper.aux");
+    expect(deletedFiles).toContain("paper.log");
+  });
+
+  it("classifies hard-stop rules as hard-stop with no fixes", () => {
+    const project: Project = {
+      rootName: "p",
+      files: [tex("a.tex", "\\documentclass{toc}\\begin{document}\\end{document}"), tex("b.tex", "\\documentclass{toc}\\begin{document}\\end{document}")],
+    };
+    const { findings } = lintProject(project);
+    const proposals = buildProposals(findings, project, new Map());
+    const toc003 = proposals.find((p) => p.finding.ruleId === "TOC003");
+    expect(toc003?.tier).toBe("hard-stop");
+    expect(toc003?.fixes).toBeUndefined();
+  });
+
+  it("fix offsets are consistent: applying the TextFix produces the expected result", () => {
+    const src = "\\documentclass{toc}\n\\newcommand{\\sparsity}{sparsity}\n\\begin{document}\\end{document}";
+    const { fix } = firstFix(singleProject(src), "TOC044");
+    const tf = fix as TextFix;
+    const patched = src.slice(0, tf.offset) + tf.newText + src.slice(tf.offset + tf.length);
+    expect(patched).toContain("\\DeclareMathOperator{\\sparsity}{sparsity}");
+    expect(patched).not.toContain("\\newcommand{\\sparsity}");
+  });
+});
+
+// ── apply ─────────────────────────────────────────────────────────────────────
+
+describe("applyTextFixes", () => {
+  it("applies a single text fix at the correct position", () => {
+    const text = "hello world";
+    const result = applyTextFixes(text, [
+      { kind: "text", file: "f", offset: 6, length: 5, oldText: "world", newText: "there" },
+    ]);
+    expect(result).toBe("hello there");
+  });
+
+  it("applies multiple non-overlapping fixes back-to-front", () => {
+    const text = "aaa bbb ccc";
+    //            0   4   8
+    const result = applyTextFixes(text, [
+      { kind: "text", file: "f", offset: 0, length: 3, oldText: "aaa", newText: "AAA" },
+      { kind: "text", file: "f", offset: 8, length: 3, oldText: "ccc", newText: "CCC" },
+    ]);
+    expect(result).toBe("AAA bbb CCC");
+  });
+
+  it("handles insertion (length 0) correctly", () => {
+    const text = "\\bibliography{refs}";
+    const inserted = "\\bibliographystyle{tocplain}\n";
+    const result = applyTextFixes(text, [
+      { kind: "text", file: "f", offset: 0, length: 0, oldText: "", newText: inserted },
+    ]);
+    expect(result).toBe(`${inserted}\\bibliography{refs}`);
+  });
+
+  it("handles deletion (newText empty) correctly", () => {
+    const text = "keep this\ndelete this\nkeep this too";
+    const del = "delete this\n";
+    const offset = text.indexOf(del);
+    const result = applyTextFixes(text, [
+      { kind: "text", file: "f", offset, length: del.length, oldText: del, newText: "" },
+    ]);
+    expect(result).toBe("keep this\nkeep this too");
+  });
+
+  it("skips overlapping fixes and keeps the later (lower offset) one", () => {
+    const text = "abcdef";
+    // Two overlapping patches: offset 0-3 and offset 2-5
+    const result = applyTextFixes(text, [
+      { kind: "text", file: "f", offset: 0, length: 3, oldText: "abc", newText: "XYZ" },
+      { kind: "text", file: "f", offset: 2, length: 3, oldText: "cde", newText: "???" },
+    ]);
+    // sorted desc: [2-5, 0-3]. First applies 2-5 → "ab???f", then 0-3 would overlap end=5 > lastStart=2, skipped.
+    expect(result).toBe("ab???f");
+  });
+});
+
+describe("applyFixes (full project)", () => {
+  function textFile(name: string, text: string): ProjectFile {
+    return { path: name, name, lowerPath: name.toLowerCase(), size: text.length, text };
+  }
+
+  it("returns patched text for modified files and nothing for untouched ones", () => {
+    const project: Project = {
+      rootName: "p",
+      files: [textFile("paper.tex", "hello world"), textFile("other.tex", "unchanged")],
+    };
+    const patches = applyFixes(project, [
+      { kind: "text", file: "paper.tex", offset: 6, length: 5, oldText: "world", newText: "there" },
+    ]);
+    expect(patches.get("paper.tex")).toBe("hello there");
+    expect(patches.has("other.tex")).toBe(false);
+  });
+
+  it("marks deleted files as null", () => {
+    const project: Project = {
+      rootName: "p",
+      files: [textFile("paper.aux", ""), textFile("paper.tex", "src")],
+    };
+    const patches = applyFixes(project, [{ kind: "file-delete", file: "paper.aux" }]);
+    expect(patches.get("paper.aux")).toBeNull();
+    expect(patches.has("paper.tex")).toBe(false);
+  });
+
+  it("file-replace overrides text patches on the same file", () => {
+    const project: Project = {
+      rootName: "p",
+      files: [textFile("style.sty", "old content")],
+    };
+    const patches = applyFixes(project, [
+      { kind: "text", file: "style.sty", offset: 0, length: 3, oldText: "old", newText: "new" },
+      { kind: "file-replace", file: "style.sty", newContent: "canonical" },
+    ]);
+    expect(patches.get("style.sty")).toBe("canonical");
+  });
+
+  it("file-delete overrides everything on the same file", () => {
+    const project: Project = {
+      rootName: "p",
+      files: [textFile("paper.bbl", "bbl content")],
+    };
+    const patches = applyFixes(project, [
+      { kind: "file-replace", file: "paper.bbl", newContent: "replaced" },
+      { kind: "file-delete", file: "paper.bbl" },
+    ]);
+    expect(patches.get("paper.bbl")).toBeNull();
+  });
+});
+
+describe("propose → apply → re-lint roundtrip", () => {
+  function textFile(name: string, text: string): ProjectFile {
+    return { path: name, name, lowerPath: name.toLowerCase(), size: text.length, text };
+  }
+
+  function applyAllAuto(project: Project, journalFiles = new Map<string, string>()): Project {
+    const { findings } = lintProject(project, journalFiles);
+    const proposals = buildProposals(findings, project, journalFiles);
+    const fixes = proposals.filter((p) => p.tier === "auto").flatMap((p) => p.fixes ?? []);
+    const patches = applyFixes(project, fixes);
+
+    // Rebuild project with patched content
+    const newFiles = project.files
+      .filter((f) => patches.get(f.path) !== null)
+      .map((f) => {
+        const patched = patches.get(f.path);
+        if (typeof patched === "string") return { ...f, text: patched, size: patched.length };
+        return f;
+      });
+    return { ...project, files: newFiles };
+  }
+
+  it("TOC044: fixing \\newcommand operator removes the finding on re-lint", () => {
+    const src = "\\documentclass{toc}\n\\newcommand{\\rank}{rank}\n\\begin{document}\\end{document}";
+    const before: Project = { rootName: "p", singleFile: true, files: [textFile("paper.tex", src)] };
+    expect(lintProject(before).findings.some((f) => f.ruleId === "TOC044")).toBe(true);
+    const after = applyAllAuto(before);
+    expect(lintProject(after).findings.some((f) => f.ruleId === "TOC044")).toBe(false);
+  });
+
+  it("TOC046: fixing <a,b> removes the finding on re-lint", () => {
+    const src = "\\documentclass{toc}\n\\begin{document}\n$<u, v>$\n\\end{document}";
+    const before: Project = { rootName: "p", singleFile: true, files: [textFile("paper.tex", src)] };
+    expect(lintProject(before).findings.some((f) => f.ruleId === "TOC046")).toBe(true);
+    const after = applyAllAuto(before);
+    expect(lintProject(after).findings.some((f) => f.ruleId === "TOC046")).toBe(false);
+  });
+
+  it("TOC012: fixing wrong documentclass removes the finding on re-lint", () => {
+    const src = "\\documentclass{article}\n\\begin{document}\\end{document}";
+    const before: Project = { rootName: "p", files: [textFile("paper.tex", src)] };
+    expect(lintProject(before).findings.some((f) => f.ruleId === "TOC012")).toBe(true);
+    const after = applyAllAuto(before);
+    expect(lintProject(after).findings.some((f) => f.ruleId === "TOC012")).toBe(false);
+  });
+
+  it("TOC004: auto-fix deletes all generated files from the project", () => {
+    const before: Project = {
+      rootName: "p",
+      files: [textFile("paper.tex", ""), textFile("paper.aux", ""), textFile("paper.log", "")],
+    };
+    expect(lintProject(before).findings.some((f) => f.ruleId === "TOC004")).toBe(true);
+    const after = applyAllAuto(before);
+    expect(after.files.some((f) => f.path === "paper.aux")).toBe(false);
+    expect(after.files.some((f) => f.path === "paper.log")).toBe(false);
+  });
+
+  it("applying multiple fixes simultaneously does not corrupt the file", () => {
+    // File has both TOC044 (bad operator def) and TOC046 (angle bracket) issues.
+    const src = [
+      "\\documentclass{toc}",
+      "\\newcommand{\\rank}{rank}",
+      "\\begin{document}",
+      "The inner product $<u, v>$ and $rank(A)$.",
+      "\\end{document}",
+    ].join("\n");
+    const before: Project = { rootName: "p", singleFile: true, files: [textFile("paper.tex", src)] };
+    const after = applyAllAuto(before);
+    const patched = after.files[0].text ?? "";
+    expect(patched).toContain("\\DeclareMathOperator{\\rank}{rank}");
+    expect(patched).toContain("\\langle u, v \\rangle");
+    expect(patched).not.toContain("\\newcommand{\\rank}");
+    expect(patched).not.toContain("<u, v>");
   });
 });
