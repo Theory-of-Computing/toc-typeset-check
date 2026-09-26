@@ -96,6 +96,7 @@ export const rules: Rule[] = [
   ruleAuthorConsistency,
   ruleJournalFiles,
   ruleMathOperatorDefinition,
+  ruleBareOperatorUsage,
 ];
 
 export function runRules(ctx: RuleContext): Finding[] {
@@ -845,6 +846,32 @@ function ruleJournalFiles({ project, journalFiles }: RuleContext): Finding[] {
         message: `Journal file \`${basename(file.path)}\` differs from the official ToC distribution (toctex.zip).`,
         suggestion:
           "Do not modify ToC-provided style files. Replace it with the unmodified copy from toctex.zip, or, if you are on an older release, update to the current distribution.",
+      });
+    }
+  }
+  return findings;
+}
+
+const BARE_OPERATOR_NAMES =
+  /(?<!\\)\b(rank|sparsity|perm|span|sign|diag|supp|proj|corank|codim|vol|poly|ker|im)\s*\(/g;
+
+function ruleBareOperatorUsage({ project, journalFiles }: RuleContext): Finding[] {
+  const findings: Finding[] = [];
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && /\.tex$/i.test(f.path) && !isIgnoredJournalFile(f, journalFiles),
+  )) {
+    const clean = stripCommentsKeepLines(file.text ?? "");
+    for (const match of clean.matchAll(BARE_OPERATOR_NAMES)) {
+      const pos = lineColAtOffset(clean, match.index ?? 0);
+      const word = match[1];
+      findings.push({
+        severity: "warning",
+        ruleId: "TOC045",
+        file: file.path,
+        ...pos,
+        message: `Math operator \`${word}\` is used bare in math mode; it will render in italic.`,
+        evidence: match[0].trim(),
+        suggestion: `Use a backslash command (e.g. \\${word}(...)) and define it with \\DeclareMathOperator{\\${word}}{${word}} if not already defined.`,
       });
     }
   }

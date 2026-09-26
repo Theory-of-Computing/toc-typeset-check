@@ -136,6 +136,7 @@ export const ruleCatalog: RuleCategory[] = [
     description: "Checks for common math typesetting errors in operator and bracket notation.",
     rules: [
       { id: "TOC044", severity: "warning", summary: "A math operator is defined with \\newcommand and a plain-text body; use \\DeclareMathOperator so the name renders upright with correct spacing." },
+      { id: "TOC045", severity: "warning", summary: "A math operator name is used bare in math mode (e.g. rank() instead of \\rank()); it will render in italic." },
     ],
   },
 ];
