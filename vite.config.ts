@@ -10,6 +10,9 @@ import { defineConfig } from "vite";
 // base. Dev/preview stay at the root.
 export default defineConfig(({ command }) => ({
   base: command === "build" ? "/toc-typeset-check/" : "/",
+  define: {
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+  },
   build: {
     rollupOptions: {
       input: {

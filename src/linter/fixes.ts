@@ -279,7 +279,7 @@ function isOperatorDefined(opName: string, project: Project): boolean {
   return project.files.some((f) => {
     const ext = f.lowerPath.slice(f.lowerPath.lastIndexOf("."));
     if (![".tex", ".sty", ".cls"].includes(ext)) return false;
-    return pattern.test(f.text);
+    return pattern.test(f.text ?? "");
   });
 }
 

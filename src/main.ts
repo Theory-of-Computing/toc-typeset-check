@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+declare const __BUILD_DATE__: string;
 import "./style.css";
 import JSZip from "jszip";
 import { readUpload } from "./linter/project";
@@ -23,6 +24,9 @@ const input = inputRaw;
 const summaryEl = summaryRaw;
 const resultsEl = resultsRaw;
 const fixSessionEl = fixSessionRaw;
+
+const buildDateEl = document.querySelector<HTMLElement>("#build-date");
+if (buildDateEl) buildDateEl.textContent = __BUILD_DATE__;
 
 // ── session state ─────────────────────────────────────────────────────────────
 
