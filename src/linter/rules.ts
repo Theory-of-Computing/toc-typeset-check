@@ -97,6 +97,7 @@ export const rules: Rule[] = [
   ruleJournalFiles,
   ruleMathOperatorDefinition,
   ruleBareOperatorUsage,
+  ruleMathAngleBrackets,
 ];
 
 export function runRules(ctx: RuleContext): Finding[] {
@@ -872,6 +873,30 @@ function ruleBareOperatorUsage({ project, journalFiles }: RuleContext): Finding[
         message: `Math operator \`${word}\` is used bare in math mode; it will render in italic.`,
         evidence: match[0].trim(),
         suggestion: `Use a backslash command (e.g. \\${word}(...)) and define it with \\DeclareMathOperator{\\${word}}{${word}} if not already defined.`,
+      });
+    }
+  }
+  return findings;
+}
+
+function ruleMathAngleBrackets({ project, journalFiles }: RuleContext): Finding[] {
+  const findings: Finding[] = [];
+  for (const file of project.files.filter(
+    (f) => f.text !== undefined && /\.tex$/i.test(f.path) && !isIgnoredJournalFile(f, journalFiles),
+  )) {
+    const clean = stripCommentsKeepLines(file.text ?? "");
+    for (const match of clean.matchAll(/(?<!\\)<(?!-)([^<>\n$]{1,60}),([^<>\n$]{1,60})(?<!-)>/g)) {
+      const pos = lineColAtOffset(clean, match.index ?? 0);
+      findings.push({
+        severity: "warning",
+        ruleId: "TOC046",
+        file: file.path,
+        ...pos,
+        message:
+          "Inner product uses bare < and > instead of \\langle and \\rangle; < and > render as comparison operators with wrong size and spacing.",
+        evidence: match[0].trim(),
+        suggestion:
+          "Replace with \\langle ... \\rangle, or define an \\inner macro: \\newcommand{\\inner}[2]{\\langle #1, #2 \\rangle}.",
       });
     }
   }

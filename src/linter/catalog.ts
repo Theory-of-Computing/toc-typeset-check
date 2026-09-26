@@ -137,6 +137,7 @@ export const ruleCatalog: RuleCategory[] = [
     rules: [
       { id: "TOC044", severity: "warning", summary: "A math operator is defined with \\newcommand and a plain-text body; use \\DeclareMathOperator so the name renders upright with correct spacing." },
       { id: "TOC045", severity: "warning", summary: "A math operator name is used bare in math mode (e.g. rank() instead of \\rank()); it will render in italic." },
+      { id: "TOC046", severity: "warning", summary: "An inner product uses bare < and > instead of \\langle and \\rangle; < and > render as comparison operators with wrong size and spacing." },
     ],
   },
 ];
